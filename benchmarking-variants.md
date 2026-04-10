@@ -6,11 +6,9 @@
 
 ## Answers
 
-1. They are surprisingly slow, especially when shedded.
-   While shredding offers significant compression benefits, there is currently a tangible
-   performance penalty.
-
-2. What is needed?
+1. They can be slow when filtering on a shedded field.
+2. Spark SQL queries do not show performance issues when projecting field within a variant, shredded or not.
+3. What is needed?
    * Predicate pushdown all the way from Iceberg to the parquet reader
    * The causes of the "unexpected outcomes" in the benchmarking experiments to be identified and addressed.
      This could include identifying flaws in the benchmarks: review of those PRs is needed to give convidence in their conclusions.
@@ -26,28 +24,43 @@ Sorted numerically by project.
 |---------|----------------------------------------------------------|----------------------------------------------------------------------------------------|----------------|
 | Iceberg | [14707](https://github.com/apache/iceberg/issues/14707)  | Vectorized read for variant                                                            | Qiegang Long   |
 | Iceberg | [15510](https://github.com/apache/iceberg/issues/15510)  | Parquet Rowgroup skipping for variant predicate                                        | Qiegang Long   |
-| Iceberg | [15629](https://github.com/apache/iceberg/pull/15629)    | Core, Spark: Add JMH benchmarks for Variants                                           | Steve Loughran |
+| Iceberg | [15629](https://github.com/apache/iceberg/pull/15629)    | *Core, Spark: Add JMH benchmarks for Variants*                                         | Steve Loughran |
 | Spark   | [54598](https://github.com/apache/spark/pull/54598)      | Enable Parquet rowgroup skipping for variant filters to improve query-time performance | Qiegang Long   |
 | Spark   | [54394](https://github.com/apache/spark/pull/54394)      | Support variant_get predicate for DSv2 filter pushdown                                 | Qiegang Long   |
-| Parquet | [3452](https://github.com/apache/parquet-java/pull/3452) | GH-3451. Add a JMH benchmark for variants                                              | Steve Loughran |
+| Parquet | [3452](https://github.com/apache/parquet-java/pull/3452) | *GH-3451. Add a JMH benchmark for variants*                                            | Steve Loughran |
 
+This document only covers benchmarks from the two issues marked in bold: one in Iceberg and one in Parquet-java. 
+A full stack built with all PRs is expected to be faster, especially through file pushdown and use of the vectorized reader.
 
 ## Benchmark Design and Test Setup
 
 Two core benchmark suites were written for Parquet And Spark, to measure:
 1. Time to construct variants through builders.
 2. Time to read data from a file containing shredded and unshredded variants.
+3. Impact of deeper nesting of structures
 
-In both iceberg and spark, Variant Builder performance appears to be functional with `O(n)` scalability.
+In both iceberg and spark, Variant Builder performance appears to be functional with `O(depth + field-count)` scalability.
 Deeply nested structures are bit less efficient because the Java `HashMap` instances constructed at each level preallocate space for 16 entries.
-These results are not covered in this report.
 
-Reading data from files, with a simple test structure, produced disappointing result.
-Not only are variants slow to process in queries, shredded variants are even slower to process.
+Because there are no suprises here, these results are not covered in this report.
+The results are available as [html](results/iceberg-variant-serialization) and [JSON](results/iceberg-variant-serialization/results.json).
+If we were to explore further, testing on isolated x86 systems would be best for isolation and clock granularity.
 
-### Schema
+What is signficant is that reading data from files, with a simple test structure, produced disappointing results.
+Not only are variants slow to process in queries, shredded variants are often even slower to process.
 
-The "record" is as follows.
+### File Schema
+
+Each Parquet record has a simple structure designed to:
+* Support queries against parquet or variant fields mapped to the same integer values.
+* Contain some strings to be slightly more realistic of the declared uses of variants. 
+
+The variant doesn't include any nested values, floating point values, and is very small.
+As such it is likely to have smaller manifests and a shorter parse time than more advanced
+uses of the datatype.
+Bear this in mind: _the overheads of per-record manifest parsing may be under-represented_ in these benchmarks.
+
+
 ```
 id: long -> unique per row
 category: int32  (0-19)
@@ -61,10 +74,9 @@ nested: variant
 The ID is is a row counter. Category is calculated from the file number and ID, such that
 all rows in a file will be in the category range 0-9 or 10-19.
 
-Example: the iceberg row construction, which uses iceberg structures and types
+Example: the iceberg row construction code, which uses iceberg structures and types
 
 ```java
-
   private void writeOneFile(DataWriter<Record> writer, VariantMetadata metadata, int fileNum)
       throws IOException {
     try (writer) {
@@ -80,15 +92,15 @@ Example: the iceberg row construction, which uses iceberg structures and types
     }
   }
   
-private static Variant buildVariant(
+  private static Variant buildVariant(
     VariantMetadata metadata, long id, int category, String col4) {
-  ShreddedObject obj = Variants.object(metadata);
-  obj.put("idstr", Variants.of("item_" + id));
-  obj.put("varid", Variants.of(id));
-  obj.put("varcategory", Variants.of(category));
-  obj.put("col4", Variants.of(col4));
-  return Variant.of(metadata, obj);
-}  
+    ShreddedObject obj = Variants.object(metadata);
+    obj.put("idstr", Variants.of("item_" + id));
+    obj.put("varid", Variants.of(id));
+    obj.put("varcategory", Variants.of(category));
+    obj.put("col4", Variants.of(col4));
+    return Variant.of(metadata, obj);
+  }  
 ```
 
 The iceberg schema is minimal, as none of the fields within the variant are defined.
@@ -100,7 +112,8 @@ private static final Schema SCHEMA =
       required(3, "nested", Types.VariantType.get()));
 ```
 
-The Parquet schema declares that there is a group `nested` of containing two required binary fields, `metadata` and `value` 
+The Parquet module tests define a schema contaning a group `nested` of containing two required binary fields, `metadata` and `value`:
+
 ```parquet
 message vschema {
   required int64 id;
@@ -113,7 +126,7 @@ message vschema {
 ```
 *Note*: it's not clear whether the variant group should be declared as optional or not.
 The examples in [the parquet format specification](https://parquet.apache.org/docs/file-format/types/variantencoding/) use `optional`.
-However, as these examples needed changes to actually work (GH-561: variant schema examples to use (VARIANT(1))), they can't be considered normative.
+However, as these examples needed changes to actually work [GH-561](https://github.com/apache/parquet-format/pull/562): variant schema examples to use (VARIANT(1))), they can't be considered normative.
 
 When writing a shredded parquet file in the parquet benchmarks, the schema was expanded to declare that there was an optional group `typed_value`, inside which each shredded element was declared with full type information.
 
@@ -134,8 +147,7 @@ message vschema {
 }
 ```
 
-Note when working with schemas and their error messages it's good to check that the files generated through iceberg are consistent with this.
-They are, as the parquet cli `schema` command shows
+Manual verification that the files generated through iceberg were consistent with this schema was performed through he parquet cli `schema` command:
 
 ```
 Properties:
@@ -175,21 +187,20 @@ message table {
 The tests were conducted on an M1 MacBook Pro with 32 MB RAM.
 This doesn't resemble production systems, and comes with the following differences which may affect results
 
-1. Not an x86 part: no `rdtscp` opcode for benchmarking to nanosecond accuracy. 
+1. It is not an x86 part and lacks the `rdtscp` opcode for benchmarking to nanosecond accuracy. 
 2. Different memory access architecture, with NVMe SSD as the "disk" layer of the hierarchy.
-3. Not Linux: some operations may be faster or slower.
+3. Not Linux: some IO operations may be faster or slower.
 4. No hadoop native libs. This will hurt performance validating file block checksums and compression/decompression.
 
-A key issue to be aware of is that without the `rdtscp` opcode, Java's `System.nanotime()` method is only accurate to the 50 MHz system clock.
+Without the `rdtscp` opcode, Java's `System.nanotime()` method is only accurate to the host's 50 MHz system clock.
 All benchmarks which may complete within nanoseconds must be repeated thousands of times so that the durations can be measured effectively with such a low resolution clock.
 
 To remove all checksum verification overhead when reading files, checksum verification has been disabled (`fs.file.checksum.verify=false`).
 Compression was disabled where possible.
 
-I did set up a test run with a i7 laptop running Ubuntu as the System Under Test; the benchmarks took longer and it was harder to iterate on benchmark execution or performance sampling.
+Note: I did set up a test run with a i7 laptop running Ubuntu as the System Under Test; the benchmarks took longer and it was harder to iterate on benchmark execution or performance sampling.
 
-Because of the hardware differences, absolute timings in the results should be considered irrelevant -what matters more
-is the relative timings between different configurations. 
+Once we are happy with the tests, a run on an EC2 server should be performed.
 
 # Iceberg query benchmarks
 
@@ -229,4 +240,42 @@ resulting into 1M records overall.
 
 
 
-The simplest test is a count operation
+# Parquet Tests
+
+
+# Benchmark Critiques
+
+Before reaching conclusions about the performance of the libraries, it is worthwhile considering whether the
+benchmarks themselves are flawed -as such flaws would negate the the conclusions.
+
+* Hardware setup. Unrealistic and not isolated enough, and without native filesystem and compression libraries
+  A rerun on x86 server would be better.
+* File sizes too small.
+* Unrealistic variant records.
+* Inefficient Spark queries.
+
+Spark queries were originally a mix of RDD-era operations 
+```java
+tableDataset().filter("category = 5").select("id")
+```
+and those with SQL
+```java
+tableDataset().filter("variant_get(nested, '$.varcategory', 'int') = 5").select("id")
+```
+
+They were changed to all be exclusively SQL, so that any overheads in SQL parsing and planning would not result in different results.
+Here are some examples.
+```java
+// project ID column
+spark().sql("SELECT id FROM variant_table");
+
+// project variant ID column
+spark().sql("SELECT variant_get(nested, '$.varid', 'int') FROM variant_table");
+
+// filter only
+spark().sql("SELECT * FROM variant_table WHERE variant_get(nested, '$.varcategory', 'int') = 5");
+
+// filter and project
+spark().sql("SELECT id FROM variant_table WHERE variant_get(nested, '$.varcategory', 'int') = 5");
+```
+
