@@ -236,12 +236,79 @@ resulting into 1M records overall.
 
 ```
 
-## Iceberg Tests
+## Iceberg Benchmark Results
+
+| Benchmark                                                              | Results                             | Source                                                                                                                                                                                  |
+|------------------------------------------------------------------------|-------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [IcebergSourceVariantIOBenchmark](results/iceberg/index.html)          | Spark SQL Queries on Iceberg tables | [source](https://github.com/steveloughran/iceberg/blob/pr/benchmark-variant/spark/v4.1/spark/src/jmh/java/org/apache/iceberg/spark/source/parquet/IcebergSourceVariantIOBenchmark.java) |
+| [VariantSerializationBenchmark](results/iceberg-variant-serialization) | Variant Serialization               | [source](https://github.com/steveloughran/iceberg/blob/pr/benchmark-variant/core/src/jmh/java/org/apache/iceberg/variants/VariantSerializationBenchmark.java)                           | 
+
+Focusing on `IcebergSourceVariantIOBenchmark
+
+All projection operations take a similar amount of time when executed through the Spark SQL API.
+
+```sql
+SELECT category FROM variant_table
+SELECT variant_get(nested, '$.varcategory', 'int') FROM variant_table
+```
+
+TODO: look at filtering.
+
+## Parquet Benchmark Results
 
 
+| Benchmark                                                              | Results                             | Source                                                                                                                                                                                  |
+|------------------------------------------------------------------------|-------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [Parquet](results/parquet)                                             | Parquet Variant Benchmarks          | [source](https://github.com/steveloughran/parquet-mr/tree/pr/benchmark-variant/parquet-benchmarks/src/main/java/org/apache/parquet/variant)                                             | 
 
-## Parquet Tests
 
+## Profile-driven parquet improvements
+
+Running the VariantProjectionBenchmark under a profiler highlighted that:
+1. VariantConverters took a lot of the CPU time.
+2. String unmarshalling took a large fraction of this and involved two stages of memory allocation and copy,
+
+
+In class `VariantConverters.VariantStringConverter`, a `Binary` is addedto the builder by converting to a string then
+calling `appendString()`.
+```java
+  static class VariantStringConverter extends ShreddedScalarConverter {
+    VariantStringConverter(ParentConverter<VariantBuilder> parent) {
+      super(parent);
+    }
+
+    @Override
+    public void addBinary(Binary value) {
+      parent.build(builder -> builder.appendString(value.toStringUsingUTF8()));
+    }
+  }
+```
+
+The `appendString()` operation immediately gets the bytes and processes them.
+```java
+public void appendString(String str) {
+  onAppend();
+  byte[] data = str.getBytes(StandardCharsets.UTF_8);
+  ...
+}
+```
+
+Factoring all the work performed on the `data` bytearray, permits a new `appendAsString(Binary binary)` method to be added
+```java
+  void appendAsString(Binary binary) {
+    onAppend();
+    writeUTF8bytes(binary.getBytesUnsafe());
+  }
+```
+Which can be invoked without perfoming any needless byte-string-byte conversion and copy.
+
+```java
+public void addBinary(Binary value) {
+  parent.build(builder -> builder.appendAsString(value));
+}
+```
+
+The benchmark suite `VariantConverterBenchmark` compares the performance of these operations, and shows a consistent speedup.
 
 ## Benchmark Critiques
 
