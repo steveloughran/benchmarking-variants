@@ -7,13 +7,13 @@
 ## Answers
 
 1. They can be slow when filtering on a shedded field.
-2. Spark SQL queries do not show performance issues when projecting field within a variant, shredded or not.
+2. Spark SQL queries do not show performance issues when projecting a field within a variant, shredded or not.
 3. What is needed?
    * Predicate pushdown all the way from Iceberg to the parquet reader
    * The causes of the "unexpected outcomes" in the benchmarking experiments to be identified and addressed.
      This could include identifying flaws in the benchmarks: review of those PRs is needed to give convidence in their conclusions.
 
-At the time of the writing of the initial document (07-04-2026) it is faster to perform filtering or projection on  variant data stored in Avro in Iceberg + Spark queries than it is on data stored in Parquet.
+At the time of the writing of the initial document (10-04-2026) the benchmark results imply that it is faster to perform filtering on variant data stored in Avro in Iceberg + Spark queries than it is on data stored in Parquet.
 
 ## Relevant Pull Requests
 
@@ -22,7 +22,7 @@ Sorted numerically by project.
 
 | Project | PR                                                       | Title                                                                                  | Author         |
 |---------|----------------------------------------------------------|----------------------------------------------------------------------------------------|----------------|
-| Iceberg | [14707](https://github.com/apache/iceberg/issues/14707)  | Vectorized read for variant                                                            | Qiegang Long   |
+| Iceberg | [14707](https://github.com/apache/iceberg/issues/14707)  | Vectorized read for variant                                                            | enriquh |
 | Iceberg | [15510](https://github.com/apache/iceberg/issues/15510)  | Parquet Rowgroup skipping for variant predicate                                        | Qiegang Long   |
 | Iceberg | [15629](https://github.com/apache/iceberg/pull/15629)    | *Core, Spark: Add JMH benchmarks for Variants*                                         | Steve Loughran |
 | Spark   | [54598](https://github.com/apache/spark/pull/54598)      | Enable Parquet rowgroup skipping for variant filters to improve query-time performance | Qiegang Long   |
@@ -71,10 +71,10 @@ nested: variant
     .col4: string -> 20 values from category
 ```
 
-The ID is is a row counter. Category is calculated from the file number and ID, such that
+The `ID` Column is is a row counter. `Category` is calculated from the file number and ID, such that
 all rows in a file will be in the category range 0-9 or 10-19.
 
-Example: the iceberg row construction code, which uses iceberg structures and types
+Example: the iceberg row construction code, which uses iceberg structures and types:
 
 ```java
   private void writeOneFile(DataWriter<Record> writer, VariantMetadata metadata, int fileNum)
@@ -87,7 +87,7 @@ Example: the iceberg row construction code, which uses iceberg structures and ty
         int category = (int) (id % 10) + categoryBase;
         Variant variant = buildVariant(metadata, id, category, repeatedStrings[category]);
         writer.write(
-            record.copy(ImmutableMap.of(COL_ID, id, "category", category, "nested", variant)));
+            record.copy(ImmutableMap.of("id", id, "category", category, "nested", variant)));
       }
     }
   }
@@ -211,7 +211,7 @@ simple columnar values.
 
 ## Table setup
 
-Tables were generated within the local filesystem comprising of five files, each with 200,000 elements,
+Tables were generated within the local filesystem of four files, each with 250,000 elements,
 resulting into 1M records overall.
 * Compression was disabled.
 * Partitioning was not enabled.
@@ -240,10 +240,10 @@ resulting into 1M records overall.
 
 
 
-# Parquet Tests
+## Parquet Tests
 
 
-# Benchmark Critiques
+## Benchmark Critiques
 
 Before reaching conclusions about the performance of the libraries, it is worthwhile considering whether the
 benchmarks themselves are flawed -as such flaws would negate the the conclusions.
@@ -279,3 +279,4 @@ spark().sql("SELECT * FROM variant_table WHERE variant_get(nested, '$.varcategor
 spark().sql("SELECT id FROM variant_table WHERE variant_get(nested, '$.varcategory', 'int') = 5");
 ```
 
+The results did change after this, with a key difference being that time differences between projecting on a variant field and a parquet column were no longer observable/significant.
