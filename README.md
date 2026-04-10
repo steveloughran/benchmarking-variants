@@ -11,4 +11,10 @@ This is being done through two PRs
 
 Work in progress: [writeup](benchmarking-variants.md)
 
-Results of the [IcebergSourceVariantIOBenchmark](results/iceberg/index.html)
+Results
+
+| Benchmark                                                              | Results                             | Source                                                                                                                                                                                  |
+|------------------------------------------------------------------------|-------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [IcebergSourceVariantIOBenchmark](results/iceberg/index.html)          | Spark SQL Queries on Iceberg tables | [source](https://github.com/steveloughran/iceberg/blob/pr/benchmark-variant/spark/v4.1/spark/src/jmh/java/org/apache/iceberg/spark/source/parquet/IcebergSourceVariantIOBenchmark.java) |
+| [VariantSerializationBenchmark](results/iceberg-variant-serialization) | Variant Serialization               | [source](https://github.com/steveloughran/iceberg/blob/pr/benchmark-variant/core/src/jmh/java/org/apache/iceberg/variants/VariantSerializationBenchmark.java)                           | 
+

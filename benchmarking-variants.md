@@ -29,7 +29,7 @@ Sorted numerically by project.
 | Spark   | [54394](https://github.com/apache/spark/pull/54394)      | Support variant_get predicate for DSv2 filter pushdown                                 | Qiegang Long   |
 | Parquet | [3452](https://github.com/apache/parquet-java/pull/3452) | *GH-3451. Add a JMH benchmark for variants*                                            | Steve Loughran |
 
-This document only covers benchmarks from the two issues marked in bold: one in Iceberg and one in Parquet-java. 
+This document only covers benchmarks from the two issues marked in italics: one in Iceberg and one in Parquet-java. 
 A full stack built with all PRs is expected to be faster, especially through file pushdown and use of the vectorized reader.
 
 ## Benchmark Design and Test Setup
