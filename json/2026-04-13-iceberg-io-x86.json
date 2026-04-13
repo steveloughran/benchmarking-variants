@@ -1,0 +1,1918 @@
+[
+    {
+        "jmhVersion" : "1.37",
+        "benchmark" : "org.apache.iceberg.spark.source.parquet.IcebergSourceVariantIOBenchmark.count",
+        "mode" : "ss",
+        "threads" : 1,
+        "forks" : 1,
+        "jvm" : "/usr/lib/jvm/java-17-openjdk-amd64/bin/java",
+        "jvmArgs" : [
+            "-Xmx32g"
+        ],
+        "jdkVersion" : "17.0.18",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "17.0.18+8-Ubuntu-124.04.1",
+        "warmupIterations" : 4,
+        "warmupTime" : "single-shot",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 8,
+        "measurementTime" : "single-shot",
+        "measurementBatchSize" : 1,
+        "params" : {
+            "tableType" : "Avro"
+        },
+        "primaryMetric" : {
+            "score" : 322.07641462500004,
+            "scoreError" : 142.21826052555812,
+            "scoreConfidence" : [
+                179.85815409944192,
+                464.2946751505582
+            ],
+            "scorePercentiles" : {
+                "0.0" : 244.532932,
+                "50.0" : 314.79122900000004,
+                "90.0" : 478.381634,
+                "95.0" : 478.381634,
+                "99.0" : 478.381634,
+                "99.9" : 478.381634,
+                "99.99" : 478.381634,
+                "99.999" : 478.381634,
+                "99.9999" : 478.381634,
+                "100.0" : 478.381634
+            },
+            "scoreUnit" : "ms/op",
+            "rawData" : [
+                [
+                    324.048043,
+                    305.534415,
+                    256.239598,
+                    274.178956,
+                    338.130944,
+                    244.532932,
+                    355.564795,
+                    478.381634
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+        }
+    },
+    {
+        "jmhVersion" : "1.37",
+        "benchmark" : "org.apache.iceberg.spark.source.parquet.IcebergSourceVariantIOBenchmark.count",
+        "mode" : "ss",
+        "threads" : 1,
+        "forks" : 1,
+        "jvm" : "/usr/lib/jvm/java-17-openjdk-amd64/bin/java",
+        "jvmArgs" : [
+            "-Xmx32g"
+        ],
+        "jdkVersion" : "17.0.18",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "17.0.18+8-Ubuntu-124.04.1",
+        "warmupIterations" : 4,
+        "warmupTime" : "single-shot",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 8,
+        "measurementTime" : "single-shot",
+        "measurementBatchSize" : 1,
+        "params" : {
+            "tableType" : "Unshredded"
+        },
+        "primaryMetric" : {
+            "score" : 310.1246375,
+            "scoreError" : 79.05743377751662,
+            "scoreConfidence" : [
+                231.06720372248338,
+                389.1820712775166
+            ],
+            "scorePercentiles" : {
+                "0.0" : 255.387193,
+                "50.0" : 306.8050225,
+                "90.0" : 367.747025,
+                "95.0" : 367.747025,
+                "99.0" : 367.747025,
+                "99.9" : 367.747025,
+                "99.99" : 367.747025,
+                "99.999" : 367.747025,
+                "99.9999" : 367.747025,
+                "100.0" : 367.747025
+            },
+            "scoreUnit" : "ms/op",
+            "rawData" : [
+                [
+                    367.747025,
+                    321.814257,
+                    327.202459,
+                    291.795788,
+                    360.374985,
+                    265.275581,
+                    255.387193,
+                    291.399812
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+        }
+    },
+    {
+        "jmhVersion" : "1.37",
+        "benchmark" : "org.apache.iceberg.spark.source.parquet.IcebergSourceVariantIOBenchmark.count",
+        "mode" : "ss",
+        "threads" : 1,
+        "forks" : 1,
+        "jvm" : "/usr/lib/jvm/java-17-openjdk-amd64/bin/java",
+        "jvmArgs" : [
+            "-Xmx32g"
+        ],
+        "jdkVersion" : "17.0.18",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "17.0.18+8-Ubuntu-124.04.1",
+        "warmupIterations" : 4,
+        "warmupTime" : "single-shot",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 8,
+        "measurementTime" : "single-shot",
+        "measurementBatchSize" : 1,
+        "params" : {
+            "tableType" : "Shredded"
+        },
+        "primaryMetric" : {
+            "score" : 298.8128315,
+            "scoreError" : 160.00478165260847,
+            "scoreConfidence" : [
+                138.80804984739154,
+                458.8176131526085
+            ],
+            "scorePercentiles" : {
+                "0.0" : 201.589147,
+                "50.0" : 293.0315795,
+                "90.0" : 457.526916,
+                "95.0" : 457.526916,
+                "99.0" : 457.526916,
+                "99.9" : 457.526916,
+                "99.99" : 457.526916,
+                "99.999" : 457.526916,
+                "99.9999" : 457.526916,
+                "100.0" : 457.526916
+            },
+            "scoreUnit" : "ms/op",
+            "rawData" : [
+                [
+                    363.151195,
+                    286.245623,
+                    315.685324,
+                    457.526916,
+                    299.817536,
+                    208.762754,
+                    201.589147,
+                    257.724157
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+        }
+    },
+    {
+        "jmhVersion" : "1.37",
+        "benchmark" : "org.apache.iceberg.spark.source.parquet.IcebergSourceVariantIOBenchmark.filterCat",
+        "mode" : "ss",
+        "threads" : 1,
+        "forks" : 1,
+        "jvm" : "/usr/lib/jvm/java-17-openjdk-amd64/bin/java",
+        "jvmArgs" : [
+            "-Xmx32g"
+        ],
+        "jdkVersion" : "17.0.18",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "17.0.18+8-Ubuntu-124.04.1",
+        "warmupIterations" : 4,
+        "warmupTime" : "single-shot",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 8,
+        "measurementTime" : "single-shot",
+        "measurementBatchSize" : 1,
+        "params" : {
+            "tableType" : "Avro"
+        },
+        "primaryMetric" : {
+            "score" : 881.1178302499999,
+            "scoreError" : 160.99344850821817,
+            "scoreConfidence" : [
+                720.1243817417817,
+                1042.111278758218
+            ],
+            "scorePercentiles" : {
+                "0.0" : 767.197656,
+                "50.0" : 888.0308835,
+                "90.0" : 1037.369368,
+                "95.0" : 1037.369368,
+                "99.0" : 1037.369368,
+                "99.9" : 1037.369368,
+                "99.99" : 1037.369368,
+                "99.999" : 1037.369368,
+                "99.9999" : 1037.369368,
+                "100.0" : 1037.369368
+            },
+            "scoreUnit" : "ms/op",
+            "rawData" : [
+                [
+                    1037.369368,
+                    893.907521,
+                    852.708425,
+                    928.020862,
+                    882.154246,
+                    787.755394,
+                    767.197656,
+                    899.82917
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+        }
+    },
+    {
+        "jmhVersion" : "1.37",
+        "benchmark" : "org.apache.iceberg.spark.source.parquet.IcebergSourceVariantIOBenchmark.filterCat",
+        "mode" : "ss",
+        "threads" : 1,
+        "forks" : 1,
+        "jvm" : "/usr/lib/jvm/java-17-openjdk-amd64/bin/java",
+        "jvmArgs" : [
+            "-Xmx32g"
+        ],
+        "jdkVersion" : "17.0.18",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "17.0.18+8-Ubuntu-124.04.1",
+        "warmupIterations" : 4,
+        "warmupTime" : "single-shot",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 8,
+        "measurementTime" : "single-shot",
+        "measurementBatchSize" : 1,
+        "params" : {
+            "tableType" : "Unshredded"
+        },
+        "primaryMetric" : {
+            "score" : 546.32310775,
+            "scoreError" : 299.9135990675472,
+            "scoreConfidence" : [
+                246.40950868245278,
+                846.2367068175472
+            ],
+            "scorePercentiles" : {
+                "0.0" : 427.31887,
+                "50.0" : 483.427093,
+                "90.0" : 905.065553,
+                "95.0" : 905.065553,
+                "99.0" : 905.065553,
+                "99.9" : 905.065553,
+                "99.99" : 905.065553,
+                "99.999" : 905.065553,
+                "99.9999" : 905.065553,
+                "100.0" : 905.065553
+            },
+            "scoreUnit" : "ms/op",
+            "rawData" : [
+                [
+                    905.065553,
+                    574.879136,
+                    451.236018,
+                    594.5445,
+                    450.686599,
+                    427.31887,
+                    491.738112,
+                    475.116074
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+        }
+    },
+    {
+        "jmhVersion" : "1.37",
+        "benchmark" : "org.apache.iceberg.spark.source.parquet.IcebergSourceVariantIOBenchmark.filterCat",
+        "mode" : "ss",
+        "threads" : 1,
+        "forks" : 1,
+        "jvm" : "/usr/lib/jvm/java-17-openjdk-amd64/bin/java",
+        "jvmArgs" : [
+            "-Xmx32g"
+        ],
+        "jdkVersion" : "17.0.18",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "17.0.18+8-Ubuntu-124.04.1",
+        "warmupIterations" : 4,
+        "warmupTime" : "single-shot",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 8,
+        "measurementTime" : "single-shot",
+        "measurementBatchSize" : 1,
+        "params" : {
+            "tableType" : "Shredded"
+        },
+        "primaryMetric" : {
+            "score" : 502.89306037499995,
+            "scoreError" : 147.20045831476722,
+            "scoreConfidence" : [
+                355.69260206023273,
+                650.0935186897672
+            ],
+            "scorePercentiles" : {
+                "0.0" : 405.847806,
+                "50.0" : 516.431554,
+                "90.0" : 604.011498,
+                "95.0" : 604.011498,
+                "99.0" : 604.011498,
+                "99.9" : 604.011498,
+                "99.99" : 604.011498,
+                "99.999" : 604.011498,
+                "99.9999" : 604.011498,
+                "100.0" : 604.011498
+            },
+            "scoreUnit" : "ms/op",
+            "rawData" : [
+                [
+                    604.011498,
+                    533.266011,
+                    553.201779,
+                    499.597097,
+                    435.420698,
+                    578.765371,
+                    405.847806,
+                    413.034223
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+        }
+    },
+    {
+        "jmhVersion" : "1.37",
+        "benchmark" : "org.apache.iceberg.spark.source.parquet.IcebergSourceVariantIOBenchmark.filterCatProjectID",
+        "mode" : "ss",
+        "threads" : 1,
+        "forks" : 1,
+        "jvm" : "/usr/lib/jvm/java-17-openjdk-amd64/bin/java",
+        "jvmArgs" : [
+            "-Xmx32g"
+        ],
+        "jdkVersion" : "17.0.18",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "17.0.18+8-Ubuntu-124.04.1",
+        "warmupIterations" : 4,
+        "warmupTime" : "single-shot",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 8,
+        "measurementTime" : "single-shot",
+        "measurementBatchSize" : 1,
+        "params" : {
+            "tableType" : "Avro"
+        },
+        "primaryMetric" : {
+            "score" : 1061.5560446250001,
+            "scoreError" : 356.93157350566275,
+            "scoreConfidence" : [
+                704.6244711193374,
+                1418.487618130663
+            ],
+            "scorePercentiles" : {
+                "0.0" : 807.900931,
+                "50.0" : 1053.884546,
+                "90.0" : 1285.552408,
+                "95.0" : 1285.552408,
+                "99.0" : 1285.552408,
+                "99.9" : 1285.552408,
+                "99.99" : 1285.552408,
+                "99.999" : 1285.552408,
+                "99.9999" : 1285.552408,
+                "100.0" : 1285.552408
+            },
+            "scoreUnit" : "ms/op",
+            "rawData" : [
+                [
+                    1222.353714,
+                    1249.207675,
+                    1285.552408,
+                    1146.349838,
+                    859.287248,
+                    961.419254,
+                    807.900931,
+                    960.377289
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+        }
+    },
+    {
+        "jmhVersion" : "1.37",
+        "benchmark" : "org.apache.iceberg.spark.source.parquet.IcebergSourceVariantIOBenchmark.filterCatProjectID",
+        "mode" : "ss",
+        "threads" : 1,
+        "forks" : 1,
+        "jvm" : "/usr/lib/jvm/java-17-openjdk-amd64/bin/java",
+        "jvmArgs" : [
+            "-Xmx32g"
+        ],
+        "jdkVersion" : "17.0.18",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "17.0.18+8-Ubuntu-124.04.1",
+        "warmupIterations" : 4,
+        "warmupTime" : "single-shot",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 8,
+        "measurementTime" : "single-shot",
+        "measurementBatchSize" : 1,
+        "params" : {
+            "tableType" : "Unshredded"
+        },
+        "primaryMetric" : {
+            "score" : 477.21849662499994,
+            "scoreError" : 260.2357230181482,
+            "scoreConfidence" : [
+                216.98277360685177,
+                737.4542196431481
+            ],
+            "scorePercentiles" : {
+                "0.0" : 381.406347,
+                "50.0" : 419.980333,
+                "90.0" : 790.68525,
+                "95.0" : 790.68525,
+                "99.0" : 790.68525,
+                "99.9" : 790.68525,
+                "99.99" : 790.68525,
+                "99.999" : 790.68525,
+                "99.9999" : 790.68525,
+                "100.0" : 790.68525
+            },
+            "scoreUnit" : "ms/op",
+            "rawData" : [
+                [
+                    490.556147,
+                    790.68525,
+                    521.175345,
+                    438.595241,
+                    401.365425,
+                    395.302394,
+                    381.406347,
+                    398.661824
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+        }
+    },
+    {
+        "jmhVersion" : "1.37",
+        "benchmark" : "org.apache.iceberg.spark.source.parquet.IcebergSourceVariantIOBenchmark.filterCatProjectID",
+        "mode" : "ss",
+        "threads" : 1,
+        "forks" : 1,
+        "jvm" : "/usr/lib/jvm/java-17-openjdk-amd64/bin/java",
+        "jvmArgs" : [
+            "-Xmx32g"
+        ],
+        "jdkVersion" : "17.0.18",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "17.0.18+8-Ubuntu-124.04.1",
+        "warmupIterations" : 4,
+        "warmupTime" : "single-shot",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 8,
+        "measurementTime" : "single-shot",
+        "measurementBatchSize" : 1,
+        "params" : {
+            "tableType" : "Shredded"
+        },
+        "primaryMetric" : {
+            "score" : 481.592995875,
+            "scoreError" : 123.01991609587624,
+            "scoreConfidence" : [
+                358.57307977912376,
+                604.6129119708762
+            ],
+            "scorePercentiles" : {
+                "0.0" : 391.585347,
+                "50.0" : 473.3351675,
+                "90.0" : 553.182809,
+                "95.0" : 553.182809,
+                "99.0" : 553.182809,
+                "99.9" : 553.182809,
+                "99.99" : 553.182809,
+                "99.999" : 553.182809,
+                "99.9999" : 553.182809,
+                "100.0" : 553.182809
+            },
+            "scoreUnit" : "ms/op",
+            "rawData" : [
+                [
+                    545.226641,
+                    552.952197,
+                    553.182809,
+                    495.086642,
+                    415.397963,
+                    447.728675,
+                    451.583693,
+                    391.585347
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+        }
+    },
+    {
+        "jmhVersion" : "1.37",
+        "benchmark" : "org.apache.iceberg.spark.source.parquet.IcebergSourceVariantIOBenchmark.filterCatProjectVarID",
+        "mode" : "ss",
+        "threads" : 1,
+        "forks" : 1,
+        "jvm" : "/usr/lib/jvm/java-17-openjdk-amd64/bin/java",
+        "jvmArgs" : [
+            "-Xmx32g"
+        ],
+        "jdkVersion" : "17.0.18",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "17.0.18+8-Ubuntu-124.04.1",
+        "warmupIterations" : 4,
+        "warmupTime" : "single-shot",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 8,
+        "measurementTime" : "single-shot",
+        "measurementBatchSize" : 1,
+        "params" : {
+            "tableType" : "Avro"
+        },
+        "primaryMetric" : {
+            "score" : 921.776714625,
+            "scoreError" : 324.29423777538784,
+            "scoreConfidence" : [
+                597.4824768496121,
+                1246.0709524003878
+            ],
+            "scorePercentiles" : {
+                "0.0" : 747.490476,
+                "50.0" : 913.1325445,
+                "90.0" : 1259.727533,
+                "95.0" : 1259.727533,
+                "99.0" : 1259.727533,
+                "99.9" : 1259.727533,
+                "99.99" : 1259.727533,
+                "99.999" : 1259.727533,
+                "99.9999" : 1259.727533,
+                "100.0" : 1259.727533
+            },
+            "scoreUnit" : "ms/op",
+            "rawData" : [
+                [
+                    1006.453253,
+                    1259.727533,
+                    979.226636,
+                    950.996635,
+                    875.268454,
+                    806.570178,
+                    748.480552,
+                    747.490476
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+        }
+    },
+    {
+        "jmhVersion" : "1.37",
+        "benchmark" : "org.apache.iceberg.spark.source.parquet.IcebergSourceVariantIOBenchmark.filterCatProjectVarID",
+        "mode" : "ss",
+        "threads" : 1,
+        "forks" : 1,
+        "jvm" : "/usr/lib/jvm/java-17-openjdk-amd64/bin/java",
+        "jvmArgs" : [
+            "-Xmx32g"
+        ],
+        "jdkVersion" : "17.0.18",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "17.0.18+8-Ubuntu-124.04.1",
+        "warmupIterations" : 4,
+        "warmupTime" : "single-shot",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 8,
+        "measurementTime" : "single-shot",
+        "measurementBatchSize" : 1,
+        "params" : {
+            "tableType" : "Unshredded"
+        },
+        "primaryMetric" : {
+            "score" : 503.128576125,
+            "scoreError" : 191.0652171097162,
+            "scoreConfidence" : [
+                312.0633590152838,
+                694.1937932347162
+            ],
+            "scorePercentiles" : {
+                "0.0" : 408.477755,
+                "50.0" : 463.9448175,
+                "90.0" : 698.724876,
+                "95.0" : 698.724876,
+                "99.0" : 698.724876,
+                "99.9" : 698.724876,
+                "99.99" : 698.724876,
+                "99.999" : 698.724876,
+                "99.9999" : 698.724876,
+                "100.0" : 698.724876
+            },
+            "scoreUnit" : "ms/op",
+            "rawData" : [
+                [
+                    698.724876,
+                    509.404091,
+                    479.034408,
+                    605.14649,
+                    429.042892,
+                    446.34287,
+                    448.855227,
+                    408.477755
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+        }
+    },
+    {
+        "jmhVersion" : "1.37",
+        "benchmark" : "org.apache.iceberg.spark.source.parquet.IcebergSourceVariantIOBenchmark.filterCatProjectVarID",
+        "mode" : "ss",
+        "threads" : 1,
+        "forks" : 1,
+        "jvm" : "/usr/lib/jvm/java-17-openjdk-amd64/bin/java",
+        "jvmArgs" : [
+            "-Xmx32g"
+        ],
+        "jdkVersion" : "17.0.18",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "17.0.18+8-Ubuntu-124.04.1",
+        "warmupIterations" : 4,
+        "warmupTime" : "single-shot",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 8,
+        "measurementTime" : "single-shot",
+        "measurementBatchSize" : 1,
+        "params" : {
+            "tableType" : "Shredded"
+        },
+        "primaryMetric" : {
+            "score" : 501.64741787500003,
+            "scoreError" : 311.11479514145293,
+            "scoreConfidence" : [
+                190.5326227335471,
+                812.762213016453
+            ],
+            "scorePercentiles" : {
+                "0.0" : 360.581779,
+                "50.0" : 451.043603,
+                "90.0" : 874.147789,
+                "95.0" : 874.147789,
+                "99.0" : 874.147789,
+                "99.9" : 874.147789,
+                "99.99" : 874.147789,
+                "99.999" : 874.147789,
+                "99.9999" : 874.147789,
+                "100.0" : 874.147789
+            },
+            "scoreUnit" : "ms/op",
+            "rawData" : [
+                [
+                    874.147789,
+                    528.031136,
+                    434.999079,
+                    534.775647,
+                    460.477459,
+                    360.581779,
+                    378.556707,
+                    441.609747
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+        }
+    },
+    {
+        "jmhVersion" : "1.37",
+        "benchmark" : "org.apache.iceberg.spark.source.parquet.IcebergSourceVariantIOBenchmark.filterVarCat",
+        "mode" : "ss",
+        "threads" : 1,
+        "forks" : 1,
+        "jvm" : "/usr/lib/jvm/java-17-openjdk-amd64/bin/java",
+        "jvmArgs" : [
+            "-Xmx32g"
+        ],
+        "jdkVersion" : "17.0.18",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "17.0.18+8-Ubuntu-124.04.1",
+        "warmupIterations" : 4,
+        "warmupTime" : "single-shot",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 8,
+        "measurementTime" : "single-shot",
+        "measurementBatchSize" : 1,
+        "params" : {
+            "tableType" : "Avro"
+        },
+        "primaryMetric" : {
+            "score" : 1940.139598375,
+            "scoreError" : 365.9112981084445,
+            "scoreConfidence" : [
+                1574.2283002665556,
+                2306.0508964834444
+            ],
+            "scorePercentiles" : {
+                "0.0" : 1743.341762,
+                "50.0" : 1936.101169,
+                "90.0" : 2332.411119,
+                "95.0" : 2332.411119,
+                "99.0" : 2332.411119,
+                "99.9" : 2332.411119,
+                "99.99" : 2332.411119,
+                "99.999" : 2332.411119,
+                "99.9999" : 2332.411119,
+                "100.0" : 2332.411119
+            },
+            "scoreUnit" : "ms/op",
+            "rawData" : [
+                [
+                    1943.346528,
+                    2332.411119,
+                    2044.861301,
+                    1928.85581,
+                    1961.336194,
+                    1823.089792,
+                    1743.874281,
+                    1743.341762
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+        }
+    },
+    {
+        "jmhVersion" : "1.37",
+        "benchmark" : "org.apache.iceberg.spark.source.parquet.IcebergSourceVariantIOBenchmark.filterVarCat",
+        "mode" : "ss",
+        "threads" : 1,
+        "forks" : 1,
+        "jvm" : "/usr/lib/jvm/java-17-openjdk-amd64/bin/java",
+        "jvmArgs" : [
+            "-Xmx32g"
+        ],
+        "jdkVersion" : "17.0.18",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "17.0.18+8-Ubuntu-124.04.1",
+        "warmupIterations" : 4,
+        "warmupTime" : "single-shot",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 8,
+        "measurementTime" : "single-shot",
+        "measurementBatchSize" : 1,
+        "params" : {
+            "tableType" : "Unshredded"
+        },
+        "primaryMetric" : {
+            "score" : 3066.57422275,
+            "scoreError" : 505.98953275663837,
+            "scoreConfidence" : [
+                2560.5846899933617,
+                3572.5637555066382
+            ],
+            "scorePercentiles" : {
+                "0.0" : 2791.393505,
+                "50.0" : 3040.64162,
+                "90.0" : 3520.198534,
+                "95.0" : 3520.198534,
+                "99.0" : 3520.198534,
+                "99.9" : 3520.198534,
+                "99.99" : 3520.198534,
+                "99.999" : 3520.198534,
+                "99.9999" : 3520.198534,
+                "100.0" : 3520.198534
+            },
+            "scoreUnit" : "ms/op",
+            "rawData" : [
+                [
+                    3313.18421,
+                    3520.198534,
+                    3096.844413,
+                    2984.438827,
+                    3191.45714,
+                    2835.387633,
+                    2799.68952,
+                    2791.393505
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+        }
+    },
+    {
+        "jmhVersion" : "1.37",
+        "benchmark" : "org.apache.iceberg.spark.source.parquet.IcebergSourceVariantIOBenchmark.filterVarCat",
+        "mode" : "ss",
+        "threads" : 1,
+        "forks" : 1,
+        "jvm" : "/usr/lib/jvm/java-17-openjdk-amd64/bin/java",
+        "jvmArgs" : [
+            "-Xmx32g"
+        ],
+        "jdkVersion" : "17.0.18",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "17.0.18+8-Ubuntu-124.04.1",
+        "warmupIterations" : 4,
+        "warmupTime" : "single-shot",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 8,
+        "measurementTime" : "single-shot",
+        "measurementBatchSize" : 1,
+        "params" : {
+            "tableType" : "Shredded"
+        },
+        "primaryMetric" : {
+            "score" : 5260.447368749999,
+            "scoreError" : 357.3182452316073,
+            "scoreConfidence" : [
+                4903.129123518393,
+                5617.765613981606
+            ],
+            "scorePercentiles" : {
+                "0.0" : 5075.758723,
+                "50.0" : 5194.435411500001,
+                "90.0" : 5558.002788,
+                "95.0" : 5558.002788,
+                "99.0" : 5558.002788,
+                "99.9" : 5558.002788,
+                "99.99" : 5558.002788,
+                "99.999" : 5558.002788,
+                "99.9999" : 5558.002788,
+                "100.0" : 5558.002788
+            },
+            "scoreUnit" : "ms/op",
+            "rawData" : [
+                [
+                    5533.439997,
+                    5558.002788,
+                    5139.097453,
+                    5216.874312,
+                    5278.115387,
+                    5075.758723,
+                    5110.293779,
+                    5171.996511
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+        }
+    },
+    {
+        "jmhVersion" : "1.37",
+        "benchmark" : "org.apache.iceberg.spark.source.parquet.IcebergSourceVariantIOBenchmark.filterVarcatProjectID",
+        "mode" : "ss",
+        "threads" : 1,
+        "forks" : 1,
+        "jvm" : "/usr/lib/jvm/java-17-openjdk-amd64/bin/java",
+        "jvmArgs" : [
+            "-Xmx32g"
+        ],
+        "jdkVersion" : "17.0.18",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "17.0.18+8-Ubuntu-124.04.1",
+        "warmupIterations" : 4,
+        "warmupTime" : "single-shot",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 8,
+        "measurementTime" : "single-shot",
+        "measurementBatchSize" : 1,
+        "params" : {
+            "tableType" : "Avro"
+        },
+        "primaryMetric" : {
+            "score" : 1981.3263749999996,
+            "scoreError" : 476.7283375767387,
+            "scoreConfidence" : [
+                1504.5980374232608,
+                2458.0547125767384
+            ],
+            "scorePercentiles" : {
+                "0.0" : 1766.849346,
+                "50.0" : 1843.0039474999999,
+                "90.0" : 2366.651919,
+                "95.0" : 2366.651919,
+                "99.0" : 2366.651919,
+                "99.9" : 2366.651919,
+                "99.99" : 2366.651919,
+                "99.999" : 2366.651919,
+                "99.9999" : 2366.651919,
+                "100.0" : 2366.651919
+            },
+            "scoreUnit" : "ms/op",
+            "rawData" : [
+                [
+                    2366.651919,
+                    2131.666833,
+                    2310.062258,
+                    1872.411953,
+                    1813.595942,
+                    1766.849346,
+                    1808.398,
+                    1780.974749
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+        }
+    },
+    {
+        "jmhVersion" : "1.37",
+        "benchmark" : "org.apache.iceberg.spark.source.parquet.IcebergSourceVariantIOBenchmark.filterVarcatProjectID",
+        "mode" : "ss",
+        "threads" : 1,
+        "forks" : 1,
+        "jvm" : "/usr/lib/jvm/java-17-openjdk-amd64/bin/java",
+        "jvmArgs" : [
+            "-Xmx32g"
+        ],
+        "jdkVersion" : "17.0.18",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "17.0.18+8-Ubuntu-124.04.1",
+        "warmupIterations" : 4,
+        "warmupTime" : "single-shot",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 8,
+        "measurementTime" : "single-shot",
+        "measurementBatchSize" : 1,
+        "params" : {
+            "tableType" : "Unshredded"
+        },
+        "primaryMetric" : {
+            "score" : 2794.0346595,
+            "scoreError" : 186.8156394397872,
+            "scoreConfidence" : [
+                2607.219020060213,
+                2980.850298939787
+            ],
+            "scorePercentiles" : {
+                "0.0" : 2675.657603,
+                "50.0" : 2777.38495,
+                "90.0" : 2970.843134,
+                "95.0" : 2970.843134,
+                "99.0" : 2970.843134,
+                "99.9" : 2970.843134,
+                "99.99" : 2970.843134,
+                "99.999" : 2970.843134,
+                "99.9999" : 2970.843134,
+                "100.0" : 2970.843134
+            },
+            "scoreUnit" : "ms/op",
+            "rawData" : [
+                [
+                    2892.013418,
+                    2774.893397,
+                    2776.919225,
+                    2777.850675,
+                    2795.096865,
+                    2970.843134,
+                    2689.002959,
+                    2675.657603
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+        }
+    },
+    {
+        "jmhVersion" : "1.37",
+        "benchmark" : "org.apache.iceberg.spark.source.parquet.IcebergSourceVariantIOBenchmark.filterVarcatProjectID",
+        "mode" : "ss",
+        "threads" : 1,
+        "forks" : 1,
+        "jvm" : "/usr/lib/jvm/java-17-openjdk-amd64/bin/java",
+        "jvmArgs" : [
+            "-Xmx32g"
+        ],
+        "jdkVersion" : "17.0.18",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "17.0.18+8-Ubuntu-124.04.1",
+        "warmupIterations" : 4,
+        "warmupTime" : "single-shot",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 8,
+        "measurementTime" : "single-shot",
+        "measurementBatchSize" : 1,
+        "params" : {
+            "tableType" : "Shredded"
+        },
+        "primaryMetric" : {
+            "score" : 5469.5478785000005,
+            "scoreError" : 332.56622385692447,
+            "scoreConfidence" : [
+                5136.981654643076,
+                5802.114102356925
+            ],
+            "scorePercentiles" : {
+                "0.0" : 5250.622791,
+                "50.0" : 5451.8648969999995,
+                "90.0" : 5738.351973,
+                "95.0" : 5738.351973,
+                "99.0" : 5738.351973,
+                "99.9" : 5738.351973,
+                "99.99" : 5738.351973,
+                "99.999" : 5738.351973,
+                "99.9999" : 5738.351973,
+                "100.0" : 5738.351973
+            },
+            "scoreUnit" : "ms/op",
+            "rawData" : [
+                [
+                    5687.135444,
+                    5502.320545,
+                    5507.775816,
+                    5350.771572,
+                    5738.351973,
+                    5401.409249,
+                    5317.995638,
+                    5250.622791
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+        }
+    },
+    {
+        "jmhVersion" : "1.37",
+        "benchmark" : "org.apache.iceberg.spark.source.parquet.IcebergSourceVariantIOBenchmark.filterVarcatProjectVarID",
+        "mode" : "ss",
+        "threads" : 1,
+        "forks" : 1,
+        "jvm" : "/usr/lib/jvm/java-17-openjdk-amd64/bin/java",
+        "jvmArgs" : [
+            "-Xmx32g"
+        ],
+        "jdkVersion" : "17.0.18",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "17.0.18+8-Ubuntu-124.04.1",
+        "warmupIterations" : 4,
+        "warmupTime" : "single-shot",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 8,
+        "measurementTime" : "single-shot",
+        "measurementBatchSize" : 1,
+        "params" : {
+            "tableType" : "Avro"
+        },
+        "primaryMetric" : {
+            "score" : 2011.468659875,
+            "scoreError" : 549.5985959120611,
+            "scoreConfidence" : [
+                1461.8700639629387,
+                2561.067255787061
+            ],
+            "scorePercentiles" : {
+                "0.0" : 1722.83401,
+                "50.0" : 1944.853675,
+                "90.0" : 2517.727436,
+                "95.0" : 2517.727436,
+                "99.0" : 2517.727436,
+                "99.9" : 2517.727436,
+                "99.99" : 2517.727436,
+                "99.999" : 2517.727436,
+                "99.9999" : 2517.727436,
+                "100.0" : 2517.727436
+            },
+            "scoreUnit" : "ms/op",
+            "rawData" : [
+                [
+                    2517.727436,
+                    1843.279549,
+                    2301.458613,
+                    1822.579301,
+                    2108.853032,
+                    2046.427801,
+                    1722.83401,
+                    1728.589537
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+        }
+    },
+    {
+        "jmhVersion" : "1.37",
+        "benchmark" : "org.apache.iceberg.spark.source.parquet.IcebergSourceVariantIOBenchmark.filterVarcatProjectVarID",
+        "mode" : "ss",
+        "threads" : 1,
+        "forks" : 1,
+        "jvm" : "/usr/lib/jvm/java-17-openjdk-amd64/bin/java",
+        "jvmArgs" : [
+            "-Xmx32g"
+        ],
+        "jdkVersion" : "17.0.18",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "17.0.18+8-Ubuntu-124.04.1",
+        "warmupIterations" : 4,
+        "warmupTime" : "single-shot",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 8,
+        "measurementTime" : "single-shot",
+        "measurementBatchSize" : 1,
+        "params" : {
+            "tableType" : "Unshredded"
+        },
+        "primaryMetric" : {
+            "score" : 3000.11854075,
+            "scoreError" : 427.9828628693628,
+            "scoreConfidence" : [
+                2572.1356778806376,
+                3428.101403619363
+            ],
+            "scorePercentiles" : {
+                "0.0" : 2795.480923,
+                "50.0" : 2902.421621,
+                "90.0" : 3374.406455,
+                "95.0" : 3374.406455,
+                "99.0" : 3374.406455,
+                "99.9" : 3374.406455,
+                "99.99" : 3374.406455,
+                "99.999" : 3374.406455,
+                "99.9999" : 3374.406455,
+                "100.0" : 3374.406455
+            },
+            "scoreUnit" : "ms/op",
+            "rawData" : [
+                [
+                    3318.063113,
+                    3374.406455,
+                    2864.4997,
+                    2891.70972,
+                    2913.133522,
+                    2795.480923,
+                    2827.71654,
+                    3015.938353
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+        }
+    },
+    {
+        "jmhVersion" : "1.37",
+        "benchmark" : "org.apache.iceberg.spark.source.parquet.IcebergSourceVariantIOBenchmark.filterVarcatProjectVarID",
+        "mode" : "ss",
+        "threads" : 1,
+        "forks" : 1,
+        "jvm" : "/usr/lib/jvm/java-17-openjdk-amd64/bin/java",
+        "jvmArgs" : [
+            "-Xmx32g"
+        ],
+        "jdkVersion" : "17.0.18",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "17.0.18+8-Ubuntu-124.04.1",
+        "warmupIterations" : 4,
+        "warmupTime" : "single-shot",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 8,
+        "measurementTime" : "single-shot",
+        "measurementBatchSize" : 1,
+        "params" : {
+            "tableType" : "Shredded"
+        },
+        "primaryMetric" : {
+            "score" : 4989.954249875,
+            "scoreError" : 273.08995298199693,
+            "scoreConfidence" : [
+                4716.864296893003,
+                5263.044202856997
+            ],
+            "scorePercentiles" : {
+                "0.0" : 4861.307132,
+                "50.0" : 4944.6112175,
+                "90.0" : 5298.210062,
+                "95.0" : 5298.210062,
+                "99.0" : 5298.210062,
+                "99.9" : 5298.210062,
+                "99.99" : 5298.210062,
+                "99.999" : 5298.210062,
+                "99.9999" : 5298.210062,
+                "100.0" : 5298.210062
+            },
+            "scoreUnit" : "ms/op",
+            "rawData" : [
+                [
+                    5063.396702,
+                    5298.210062,
+                    4920.713752,
+                    4883.966447,
+                    5024.068183,
+                    4968.508683,
+                    4899.463038,
+                    4861.307132
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+        }
+    },
+    {
+        "jmhVersion" : "1.37",
+        "benchmark" : "org.apache.iceberg.spark.source.parquet.IcebergSourceVariantIOBenchmark.projectCat",
+        "mode" : "ss",
+        "threads" : 1,
+        "forks" : 1,
+        "jvm" : "/usr/lib/jvm/java-17-openjdk-amd64/bin/java",
+        "jvmArgs" : [
+            "-Xmx32g"
+        ],
+        "jdkVersion" : "17.0.18",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "17.0.18+8-Ubuntu-124.04.1",
+        "warmupIterations" : 4,
+        "warmupTime" : "single-shot",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 8,
+        "measurementTime" : "single-shot",
+        "measurementBatchSize" : 1,
+        "params" : {
+            "tableType" : "Avro"
+        },
+        "primaryMetric" : {
+            "score" : 298.20833174999996,
+            "scoreError" : 85.89931789177156,
+            "scoreConfidence" : [
+                212.3090138582284,
+                384.1076496417715
+            ],
+            "scorePercentiles" : {
+                "0.0" : 216.71917,
+                "50.0" : 291.2324535,
+                "90.0" : 351.946838,
+                "95.0" : 351.946838,
+                "99.0" : 351.946838,
+                "99.9" : 351.946838,
+                "99.99" : 351.946838,
+                "99.999" : 351.946838,
+                "99.9999" : 351.946838,
+                "100.0" : 351.946838
+            },
+            "scoreUnit" : "ms/op",
+            "rawData" : [
+                [
+                    351.946838,
+                    339.212945,
+                    293.723276,
+                    268.120929,
+                    216.71917,
+                    286.856673,
+                    340.345192,
+                    288.741631
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+        }
+    },
+    {
+        "jmhVersion" : "1.37",
+        "benchmark" : "org.apache.iceberg.spark.source.parquet.IcebergSourceVariantIOBenchmark.projectCat",
+        "mode" : "ss",
+        "threads" : 1,
+        "forks" : 1,
+        "jvm" : "/usr/lib/jvm/java-17-openjdk-amd64/bin/java",
+        "jvmArgs" : [
+            "-Xmx32g"
+        ],
+        "jdkVersion" : "17.0.18",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "17.0.18+8-Ubuntu-124.04.1",
+        "warmupIterations" : 4,
+        "warmupTime" : "single-shot",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 8,
+        "measurementTime" : "single-shot",
+        "measurementBatchSize" : 1,
+        "params" : {
+            "tableType" : "Unshredded"
+        },
+        "primaryMetric" : {
+            "score" : 320.14739475,
+            "scoreError" : 93.17276722634725,
+            "scoreConfidence" : [
+                226.97462752365274,
+                413.3201619763472
+            ],
+            "scorePercentiles" : {
+                "0.0" : 280.814649,
+                "50.0" : 300.05366449999997,
+                "90.0" : 421.195623,
+                "95.0" : 421.195623,
+                "99.0" : 421.195623,
+                "99.9" : 421.195623,
+                "99.99" : 421.195623,
+                "99.999" : 421.195623,
+                "99.9999" : 421.195623,
+                "100.0" : 421.195623
+            },
+            "scoreUnit" : "ms/op",
+            "rawData" : [
+                [
+                    323.356472,
+                    308.396276,
+                    291.711053,
+                    361.441158,
+                    421.195623,
+                    290.526576,
+                    280.814649,
+                    283.737351
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+        }
+    },
+    {
+        "jmhVersion" : "1.37",
+        "benchmark" : "org.apache.iceberg.spark.source.parquet.IcebergSourceVariantIOBenchmark.projectCat",
+        "mode" : "ss",
+        "threads" : 1,
+        "forks" : 1,
+        "jvm" : "/usr/lib/jvm/java-17-openjdk-amd64/bin/java",
+        "jvmArgs" : [
+            "-Xmx32g"
+        ],
+        "jdkVersion" : "17.0.18",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "17.0.18+8-Ubuntu-124.04.1",
+        "warmupIterations" : 4,
+        "warmupTime" : "single-shot",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 8,
+        "measurementTime" : "single-shot",
+        "measurementBatchSize" : 1,
+        "params" : {
+            "tableType" : "Shredded"
+        },
+        "primaryMetric" : {
+            "score" : 313.19948525,
+            "scoreError" : 180.86289946798877,
+            "scoreConfidence" : [
+                132.33658578201124,
+                494.0623847179888
+            ],
+            "scorePercentiles" : {
+                "0.0" : 223.220854,
+                "50.0" : 288.792735,
+                "90.0" : 519.295959,
+                "95.0" : 519.295959,
+                "99.0" : 519.295959,
+                "99.9" : 519.295959,
+                "99.99" : 519.295959,
+                "99.999" : 519.295959,
+                "99.9999" : 519.295959,
+                "100.0" : 519.295959
+            },
+            "scoreUnit" : "ms/op",
+            "rawData" : [
+                [
+                    331.287808,
+                    355.689736,
+                    261.490182,
+                    277.280671,
+                    300.304799,
+                    519.295959,
+                    223.220854,
+                    237.025873
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+        }
+    },
+    {
+        "jmhVersion" : "1.37",
+        "benchmark" : "org.apache.iceberg.spark.source.parquet.IcebergSourceVariantIOBenchmark.projectID",
+        "mode" : "ss",
+        "threads" : 1,
+        "forks" : 1,
+        "jvm" : "/usr/lib/jvm/java-17-openjdk-amd64/bin/java",
+        "jvmArgs" : [
+            "-Xmx32g"
+        ],
+        "jdkVersion" : "17.0.18",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "17.0.18+8-Ubuntu-124.04.1",
+        "warmupIterations" : 4,
+        "warmupTime" : "single-shot",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 8,
+        "measurementTime" : "single-shot",
+        "measurementBatchSize" : 1,
+        "params" : {
+            "tableType" : "Avro"
+        },
+        "primaryMetric" : {
+            "score" : 306.391255,
+            "scoreError" : 84.81686500168325,
+            "scoreConfidence" : [
+                221.57438999831675,
+                391.20812000168326
+            ],
+            "scorePercentiles" : {
+                "0.0" : 217.417005,
+                "50.0" : 312.0061085,
+                "90.0" : 350.336323,
+                "95.0" : 350.336323,
+                "99.0" : 350.336323,
+                "99.9" : 350.336323,
+                "99.99" : 350.336323,
+                "99.999" : 350.336323,
+                "99.9999" : 350.336323,
+                "100.0" : 350.336323
+            },
+            "scoreUnit" : "ms/op",
+            "rawData" : [
+                [
+                    333.316266,
+                    286.598519,
+                    217.417005,
+                    291.517454,
+                    332.018216,
+                    291.994001,
+                    350.336323,
+                    347.932256
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+        }
+    },
+    {
+        "jmhVersion" : "1.37",
+        "benchmark" : "org.apache.iceberg.spark.source.parquet.IcebergSourceVariantIOBenchmark.projectID",
+        "mode" : "ss",
+        "threads" : 1,
+        "forks" : 1,
+        "jvm" : "/usr/lib/jvm/java-17-openjdk-amd64/bin/java",
+        "jvmArgs" : [
+            "-Xmx32g"
+        ],
+        "jdkVersion" : "17.0.18",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "17.0.18+8-Ubuntu-124.04.1",
+        "warmupIterations" : 4,
+        "warmupTime" : "single-shot",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 8,
+        "measurementTime" : "single-shot",
+        "measurementBatchSize" : 1,
+        "params" : {
+            "tableType" : "Unshredded"
+        },
+        "primaryMetric" : {
+            "score" : 298.5815935,
+            "scoreError" : 124.54318176318048,
+            "scoreConfidence" : [
+                174.0384117368195,
+                423.1247752631805
+            ],
+            "scorePercentiles" : {
+                "0.0" : 248.141057,
+                "50.0" : 274.2594415,
+                "90.0" : 452.356771,
+                "95.0" : 452.356771,
+                "99.0" : 452.356771,
+                "99.9" : 452.356771,
+                "99.99" : 452.356771,
+                "99.999" : 452.356771,
+                "99.9999" : 452.356771,
+                "100.0" : 452.356771
+            },
+            "scoreUnit" : "ms/op",
+            "rawData" : [
+                [
+                    302.505297,
+                    306.105902,
+                    248.141057,
+                    268.382392,
+                    452.356771,
+                    269.192375,
+                    262.642446,
+                    279.326508
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+        }
+    },
+    {
+        "jmhVersion" : "1.37",
+        "benchmark" : "org.apache.iceberg.spark.source.parquet.IcebergSourceVariantIOBenchmark.projectID",
+        "mode" : "ss",
+        "threads" : 1,
+        "forks" : 1,
+        "jvm" : "/usr/lib/jvm/java-17-openjdk-amd64/bin/java",
+        "jvmArgs" : [
+            "-Xmx32g"
+        ],
+        "jdkVersion" : "17.0.18",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "17.0.18+8-Ubuntu-124.04.1",
+        "warmupIterations" : 4,
+        "warmupTime" : "single-shot",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 8,
+        "measurementTime" : "single-shot",
+        "measurementBatchSize" : 1,
+        "params" : {
+            "tableType" : "Shredded"
+        },
+        "primaryMetric" : {
+            "score" : 307.40105325,
+            "scoreError" : 134.8761031638283,
+            "scoreConfidence" : [
+                172.5249500861717,
+                442.2771564138283
+            ],
+            "scorePercentiles" : {
+                "0.0" : 251.008308,
+                "50.0" : 284.94870549999996,
+                "90.0" : 471.207602,
+                "95.0" : 471.207602,
+                "99.0" : 471.207602,
+                "99.9" : 471.207602,
+                "99.99" : 471.207602,
+                "99.999" : 471.207602,
+                "99.9999" : 471.207602,
+                "100.0" : 471.207602
+            },
+            "scoreUnit" : "ms/op",
+            "rawData" : [
+                [
+                    310.466786,
+                    251.008308,
+                    323.30305,
+                    261.02501,
+                    275.783612,
+                    272.300259,
+                    471.207602,
+                    294.113799
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+        }
+    },
+    {
+        "jmhVersion" : "1.37",
+        "benchmark" : "org.apache.iceberg.spark.source.parquet.IcebergSourceVariantIOBenchmark.projectVarCat",
+        "mode" : "ss",
+        "threads" : 1,
+        "forks" : 1,
+        "jvm" : "/usr/lib/jvm/java-17-openjdk-amd64/bin/java",
+        "jvmArgs" : [
+            "-Xmx32g"
+        ],
+        "jdkVersion" : "17.0.18",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "17.0.18+8-Ubuntu-124.04.1",
+        "warmupIterations" : 4,
+        "warmupTime" : "single-shot",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 8,
+        "measurementTime" : "single-shot",
+        "measurementBatchSize" : 1,
+        "params" : {
+            "tableType" : "Avro"
+        },
+        "primaryMetric" : {
+            "score" : 298.11493875,
+            "scoreError" : 70.26863465820605,
+            "scoreConfidence" : [
+                227.84630409179397,
+                368.3835734082061
+            ],
+            "scorePercentiles" : {
+                "0.0" : 247.784018,
+                "50.0" : 292.64984,
+                "90.0" : 356.276795,
+                "95.0" : 356.276795,
+                "99.0" : 356.276795,
+                "99.9" : 356.276795,
+                "99.99" : 356.276795,
+                "99.999" : 356.276795,
+                "99.9999" : 356.276795,
+                "100.0" : 356.276795
+            },
+            "scoreUnit" : "ms/op",
+            "rawData" : [
+                [
+                    329.167186,
+                    294.040826,
+                    259.396643,
+                    281.65738,
+                    247.784018,
+                    325.337808,
+                    356.276795,
+                    291.258854
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+        }
+    },
+    {
+        "jmhVersion" : "1.37",
+        "benchmark" : "org.apache.iceberg.spark.source.parquet.IcebergSourceVariantIOBenchmark.projectVarCat",
+        "mode" : "ss",
+        "threads" : 1,
+        "forks" : 1,
+        "jvm" : "/usr/lib/jvm/java-17-openjdk-amd64/bin/java",
+        "jvmArgs" : [
+            "-Xmx32g"
+        ],
+        "jdkVersion" : "17.0.18",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "17.0.18+8-Ubuntu-124.04.1",
+        "warmupIterations" : 4,
+        "warmupTime" : "single-shot",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 8,
+        "measurementTime" : "single-shot",
+        "measurementBatchSize" : 1,
+        "params" : {
+            "tableType" : "Unshredded"
+        },
+        "primaryMetric" : {
+            "score" : 315.38535049999996,
+            "scoreError" : 144.19955638829742,
+            "scoreConfidence" : [
+                171.18579411170253,
+                459.5849068882974
+            ],
+            "scorePercentiles" : {
+                "0.0" : 213.175224,
+                "50.0" : 336.647821,
+                "90.0" : 401.89943,
+                "95.0" : 401.89943,
+                "99.0" : 401.89943,
+                "99.9" : 401.89943,
+                "99.99" : 401.89943,
+                "99.999" : 401.89943,
+                "99.9999" : 401.89943,
+                "100.0" : 401.89943
+            },
+            "scoreUnit" : "ms/op",
+            "rawData" : [
+                [
+                    368.74549,
+                    345.194505,
+                    328.101137,
+                    401.89943,
+                    391.206149,
+                    213.175224,
+                    243.247258,
+                    231.513611
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+        }
+    },
+    {
+        "jmhVersion" : "1.37",
+        "benchmark" : "org.apache.iceberg.spark.source.parquet.IcebergSourceVariantIOBenchmark.projectVarCat",
+        "mode" : "ss",
+        "threads" : 1,
+        "forks" : 1,
+        "jvm" : "/usr/lib/jvm/java-17-openjdk-amd64/bin/java",
+        "jvmArgs" : [
+            "-Xmx32g"
+        ],
+        "jdkVersion" : "17.0.18",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "17.0.18+8-Ubuntu-124.04.1",
+        "warmupIterations" : 4,
+        "warmupTime" : "single-shot",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 8,
+        "measurementTime" : "single-shot",
+        "measurementBatchSize" : 1,
+        "params" : {
+            "tableType" : "Shredded"
+        },
+        "primaryMetric" : {
+            "score" : 338.806313875,
+            "scoreError" : 112.29020513720872,
+            "scoreConfidence" : [
+                226.51610873779128,
+                451.0965190122087
+            ],
+            "scorePercentiles" : {
+                "0.0" : 289.30376,
+                "50.0" : 323.45897,
+                "90.0" : 469.949103,
+                "95.0" : 469.949103,
+                "99.0" : 469.949103,
+                "99.9" : 469.949103,
+                "99.99" : 469.949103,
+                "99.999" : 469.949103,
+                "99.9999" : 469.949103,
+                "100.0" : 469.949103
+            },
+            "scoreUnit" : "ms/op",
+            "rawData" : [
+                [
+                    354.28292,
+                    354.771917,
+                    296.690042,
+                    315.260391,
+                    331.657549,
+                    289.30376,
+                    469.949103,
+                    298.534829
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+        }
+    },
+    {
+        "jmhVersion" : "1.37",
+        "benchmark" : "org.apache.iceberg.spark.source.parquet.IcebergSourceVariantIOBenchmark.projectVarID",
+        "mode" : "ss",
+        "threads" : 1,
+        "forks" : 1,
+        "jvm" : "/usr/lib/jvm/java-17-openjdk-amd64/bin/java",
+        "jvmArgs" : [
+            "-Xmx32g"
+        ],
+        "jdkVersion" : "17.0.18",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "17.0.18+8-Ubuntu-124.04.1",
+        "warmupIterations" : 4,
+        "warmupTime" : "single-shot",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 8,
+        "measurementTime" : "single-shot",
+        "measurementBatchSize" : 1,
+        "params" : {
+            "tableType" : "Avro"
+        },
+        "primaryMetric" : {
+            "score" : 327.699819375,
+            "scoreError" : 43.07255184768571,
+            "scoreConfidence" : [
+                284.6272675273143,
+                370.7723712226857
+            ],
+            "scorePercentiles" : {
+                "0.0" : 297.163686,
+                "50.0" : 333.07684300000005,
+                "90.0" : 356.533941,
+                "95.0" : 356.533941,
+                "99.0" : 356.533941,
+                "99.9" : 356.533941,
+                "99.99" : 356.533941,
+                "99.999" : 356.533941,
+                "99.9999" : 356.533941,
+                "100.0" : 356.533941
+            },
+            "scoreUnit" : "ms/op",
+            "rawData" : [
+                [
+                    347.737569,
+                    344.006253,
+                    302.747811,
+                    329.697577,
+                    307.255609,
+                    356.533941,
+                    336.456109,
+                    297.163686
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+        }
+    },
+    {
+        "jmhVersion" : "1.37",
+        "benchmark" : "org.apache.iceberg.spark.source.parquet.IcebergSourceVariantIOBenchmark.projectVarID",
+        "mode" : "ss",
+        "threads" : 1,
+        "forks" : 1,
+        "jvm" : "/usr/lib/jvm/java-17-openjdk-amd64/bin/java",
+        "jvmArgs" : [
+            "-Xmx32g"
+        ],
+        "jdkVersion" : "17.0.18",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "17.0.18+8-Ubuntu-124.04.1",
+        "warmupIterations" : 4,
+        "warmupTime" : "single-shot",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 8,
+        "measurementTime" : "single-shot",
+        "measurementBatchSize" : 1,
+        "params" : {
+            "tableType" : "Unshredded"
+        },
+        "primaryMetric" : {
+            "score" : 294.080013875,
+            "scoreError" : 105.32142120727872,
+            "scoreConfidence" : [
+                188.7585926677213,
+                399.40143508227874
+            ],
+            "scorePercentiles" : {
+                "0.0" : 222.4426,
+                "50.0" : 275.59466050000003,
+                "90.0" : 386.656363,
+                "95.0" : 386.656363,
+                "99.0" : 386.656363,
+                "99.9" : 386.656363,
+                "99.99" : 386.656363,
+                "99.999" : 386.656363,
+                "99.9999" : 386.656363,
+                "100.0" : 386.656363
+            },
+            "scoreUnit" : "ms/op",
+            "rawData" : [
+                [
+                    332.105162,
+                    344.120012,
+                    287.689943,
+                    386.656363,
+                    255.064681,
+                    261.061972,
+                    263.499378,
+                    222.4426
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+        }
+    },
+    {
+        "jmhVersion" : "1.37",
+        "benchmark" : "org.apache.iceberg.spark.source.parquet.IcebergSourceVariantIOBenchmark.projectVarID",
+        "mode" : "ss",
+        "threads" : 1,
+        "forks" : 1,
+        "jvm" : "/usr/lib/jvm/java-17-openjdk-amd64/bin/java",
+        "jvmArgs" : [
+            "-Xmx32g"
+        ],
+        "jdkVersion" : "17.0.18",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "17.0.18+8-Ubuntu-124.04.1",
+        "warmupIterations" : 4,
+        "warmupTime" : "single-shot",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 8,
+        "measurementTime" : "single-shot",
+        "measurementBatchSize" : 1,
+        "params" : {
+            "tableType" : "Shredded"
+        },
+        "primaryMetric" : {
+            "score" : 327.515712625,
+            "scoreError" : 135.87821850630772,
+            "scoreConfidence" : [
+                191.63749411869227,
+                463.3939311313077
+            ],
+            "scorePercentiles" : {
+                "0.0" : 226.53387,
+                "50.0" : 307.9932065,
+                "90.0" : 436.870086,
+                "95.0" : 436.870086,
+                "99.0" : 436.870086,
+                "99.9" : 436.870086,
+                "99.99" : 436.870086,
+                "99.999" : 436.870086,
+                "99.9999" : 436.870086,
+                "100.0" : 436.870086
+            },
+            "scoreUnit" : "ms/op",
+            "rawData" : [
+                [
+                    380.728071,
+                    398.691132,
+                    299.519549,
+                    316.466864,
+                    279.389635,
+                    436.870086,
+                    226.53387,
+                    281.926494
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+        }
+    }
+]
+
+

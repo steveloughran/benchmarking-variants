@@ -8,10 +8,14 @@
 
 1. They can be slow when filtering on a shedded field.
 2. Spark SQL queries do not show performance issues when projecting a field within a variant, shredded or not.
-3. What is needed?
+3. The parquet-java library has some odd behaviour related to schema used.
+4. It also has some easy and tangible speedups when parsing unshredded strings,
+5. What is needed?
    * Predicate pushdown all the way from Iceberg to the parquet reader
    * The causes of the "unexpected outcomes" in the benchmarking experiments to be identified and addressed.
      This could include identifying flaws in the benchmarks: review of those PRs is needed to give convidence in their conclusions.
+   * A bit more profiling of the parquet benchmarking
+   * An iceberg benchmark run with all the pending PRs merged to see what difference that makes. 
 
 At the time of the writing of the initial document (10-04-2026) the benchmark results imply that it is faster to perform filtering on variant data stored in Avro in Iceberg + Spark queries than it is on data stored in Parquet.
 
@@ -22,7 +26,7 @@ Sorted numerically by project.
 
 | Project | PR                                                       | Title                                                                                  | Author         |
 |---------|----------------------------------------------------------|----------------------------------------------------------------------------------------|----------------|
-| Iceberg | [14707](https://github.com/apache/iceberg/issues/14707)  | Vectorized read for variant                                                            | enriquh |
+| Iceberg | [14707](https://github.com/apache/iceberg/issues/14707)  | Vectorized read for variant                                                            | enriquh        |
 | Iceberg | [15510](https://github.com/apache/iceberg/issues/15510)  | Parquet Rowgroup skipping for variant predicate                                        | Qiegang Long   |
 | Iceberg | [15629](https://github.com/apache/iceberg/pull/15629)    | *Core, Spark: Add JMH benchmarks for Variants*                                         | Steve Loughran |
 | Spark   | [54598](https://github.com/apache/spark/pull/54598)      | Enable Parquet rowgroup skipping for variant filters to improve query-time performance | Qiegang Long   |
@@ -43,8 +47,7 @@ In both iceberg and spark, Variant Builder performance appears to be functional 
 Deeply nested structures are bit less efficient because the Java `HashMap` instances constructed at each level preallocate space for 16 entries.
 
 Because there are no suprises here, these results are not covered in this report.
-The results are available as [html](results/iceberg-variant-serialization) and [JSON](results/iceberg-variant-serialization/results.json).
-If we were to explore further, testing on isolated x86 systems would be best for isolation and clock granularity.
+The results are available as [html](results/iceberg) and [JSON](json/).
 
 What is signficant is that reading data from files, with a simple test structure, produced disappointing results.
 Not only are variants slow to process in queries, shredded variants are often even slower to process.
@@ -77,33 +80,33 @@ all rows in a file will be in the category range 0-9 or 10-19.
 Example: the iceberg row construction code, which uses iceberg structures and types:
 
 ```java
-  private void writeOneFile(DataWriter<Record> writer, VariantMetadata metadata, int fileNum)
-      throws IOException {
-    try (writer) {
-      GenericRecord record = GenericRecord.create(SCHEMA);
-      int categoryBase = (fileNum % 2) * 10;
-      for (int i = 0; i < NUM_ROWS_PER_FILE; i++) {
-        long id = (long) fileNum * NUM_ROWS_PER_FILE + i;
-        int category = (int) (id % 10) + categoryBase;
-        Variant variant = buildVariant(metadata, id, category, repeatedStrings[category]);
-        writer.write(
-            record.copy(ImmutableMap.of("id", id, "category", category, "nested", variant)));
-      }
+private void writeOneFile(DataWriter<Record> writer, VariantMetadata metadata, int fileNum)
+    throws IOException {
+  try (writer) {
+    GenericRecord record = GenericRecord.create(SCHEMA);
+    int categoryBase = (fileNum % 2) * 10;
+    for (int i = 0; i < NUM_ROWS_PER_FILE; i++) {
+      long id = (long) fileNum * NUM_ROWS_PER_FILE + i;
+      int category = (int) (id % 10) + categoryBase;
+      Variant variant = buildVariant(metadata, id, category, repeatedStrings[category]);
+      writer.write(
+          record.copy(ImmutableMap.of("id", id, "category", category, "nested", variant)));
     }
   }
-  
-  private static Variant buildVariant(
-    VariantMetadata metadata, long id, int category, String col4) {
-    ShreddedObject obj = Variants.object(metadata);
-    obj.put("idstr", Variants.of("item_" + id));
-    obj.put("varid", Variants.of(id));
-    obj.put("varcategory", Variants.of(category));
-    obj.put("col4", Variants.of(col4));
-    return Variant.of(metadata, obj);
-  }  
+}
+
+private static Variant buildVariant(
+  VariantMetadata metadata, long id, int category, String col4) {
+  ShreddedObject obj = Variants.object(metadata);
+  obj.put("idstr", Variants.of("item_" + id));
+  obj.put("varid", Variants.of(id));
+  obj.put("varcategory", Variants.of(category));
+  obj.put("col4", Variants.of(col4));
+  return Variant.of(metadata, obj);
+}
 ```
 
-The iceberg schema is minimal, as none of the fields within the variant are defined.
+The Iceberg schema is minimal, as none of the fields within the variant are defined.
 ```java
 private static final Schema SCHEMA =
   new Schema(
@@ -182,144 +185,20 @@ message table {
 ```
 
 
-# Test Hardware Setup
+## Methods
 
-The tests were conducted on an M1 MacBook Pro with 32 MB RAM.
-This doesn't resemble production systems, and comes with the following differences which may affect results
-
-1. It is not an x86 part and lacks the `rdtscp` opcode for benchmarking to nanosecond accuracy. 
-2. Different memory access architecture, with NVMe SSD as the "disk" layer of the hierarchy.
-3. Not Linux: some IO operations may be faster or slower.
-4. No hadoop native libs. This will hurt performance validating file block checksums and compression/decompression.
-
-Without the `rdtscp` opcode, Java's `System.nanotime()` method is only accurate to the host's 50 MHz system clock.
-All benchmarks which may complete within nanoseconds must be repeated thousands of times so that the durations can be measured effectively with such a low resolution clock.
-
-To remove all checksum verification overhead when reading files, checksum verification has been disabled (`fs.file.checksum.verify=false`).
-Compression was disabled where possible.
-
-Note: I did set up a test run with a i7 laptop running Ubuntu as the System Under Test; the benchmarks took longer and it was harder to iterate on benchmark execution or performance sampling.
-
-Once we are happy with the tests, a run on an EC2 server should be performed.
-
-# Iceberg query benchmarks
-
-The iceberg query benchmarks generated the a test dataset as: Parquet Unshredded, Parquet Shredded and Avro.
-Variants are stored in the Avro files using Iceberg's variant ser/deser code: they are not saved as
-simple columnar values.
-
-
-## Table setup
-
-Tables were generated within the local filesystem of four files, each with 250,000 elements,
-resulting into 1M records overall.
-* Compression was disabled.
-* Partitioning was not enabled.
-* In the absence of of [#14707 Vectorized read for variant](https://github.com/apache/iceberg/issues/14707) vectorization was disabled.    
-
-
-```java
-  protected Table initTable() {
-    HadoopTables tables = new HadoopTables(hadoopConf());
-    Map<String, String> properties = Maps.newHashMap();
-    properties.put(TableProperties.FORMAT_VERSION, "3");
-    properties.put(TableProperties.SPLIT_OPEN_FILE_COST, Integer.toString(128 * 1024 * 1024));
-    // turn off compression to remove it as a factor.
-    properties.put(TableProperties.METADATA_COMPRESSION, "none");
-    properties.put(TableProperties.PARQUET_COMPRESSION, "none");
-    properties.put(TableProperties.AVRO_COMPRESSION, "none");
-    // variant projection pushdown not supported with the vectorized reader.
-    properties.put(TableProperties.PARQUET_VECTORIZATION_ENABLED, "false");
-
-    return tables.create(SCHEMA, PartitionSpec.unpartitioned(), properties, newTableLocation());
-  }
-
-```
-
-## Iceberg Benchmark Results
-
-| Benchmark                                                              | Results                             | Source                                                                                                                                                                                  |
-|------------------------------------------------------------------------|-------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [IcebergSourceVariantIOBenchmark](results/iceberg/index.html)          | Spark SQL Queries on Iceberg tables | [source](https://github.com/steveloughran/iceberg/blob/pr/benchmark-variant/spark/v4.1/spark/src/jmh/java/org/apache/iceberg/spark/source/parquet/IcebergSourceVariantIOBenchmark.java) |
-| [VariantSerializationBenchmark](results/iceberg-variant-serialization) | Variant Serialization               | [source](https://github.com/steveloughran/iceberg/blob/pr/benchmark-variant/core/src/jmh/java/org/apache/iceberg/variants/VariantSerializationBenchmark.java)                           | 
-
-Focusing on `IcebergSourceVariantIOBenchmark
-
-All projection operations take a similar amount of time when executed through the Spark SQL API.
-
-```sql
-SELECT category FROM variant_table
-SELECT variant_get(nested, '$.varcategory', 'int') FROM variant_table
-```
-
-TODO: look at filtering.
-
-## Parquet Benchmark Results
-
-
-| Benchmark                                                              | Results                             | Source                                                                                                                                                                                  |
-|------------------------------------------------------------------------|-------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [Parquet](results/parquet)                                             | Parquet Variant Benchmarks          | [source](https://github.com/steveloughran/parquet-mr/tree/pr/benchmark-variant/parquet-benchmarks/src/main/java/org/apache/parquet/variant)                                             | 
-
-
-## Profile-driven parquet improvements
-
-Running the VariantProjectionBenchmark under a profiler highlighted that:
-1. VariantConverters took a lot of the CPU time.
-2. String unmarshalling took a large fraction of this and involved two stages of memory allocation and copy,
-
-
-In class `VariantConverters.VariantStringConverter`, a `Binary` is addedto the builder by converting to a string then
-calling `appendString()`.
-```java
-  static class VariantStringConverter extends ShreddedScalarConverter {
-    VariantStringConverter(ParentConverter<VariantBuilder> parent) {
-      super(parent);
-    }
-
-    @Override
-    public void addBinary(Binary value) {
-      parent.build(builder -> builder.appendString(value.toStringUsingUTF8()));
-    }
-  }
-```
-
-The `appendString()` operation immediately gets the bytes and processes them.
-```java
-public void appendString(String str) {
-  onAppend();
-  byte[] data = str.getBytes(StandardCharsets.UTF_8);
-  ...
-}
-```
-
-Factoring all the work performed on the `data` bytearray, permits a new `appendAsString(Binary binary)` method to be added
-```java
-  void appendAsString(Binary binary) {
-    onAppend();
-    writeUTF8bytes(binary.getBytesUnsafe());
-  }
-```
-Which can be invoked without perfoming any needless byte-string-byte conversion and copy.
-
-```java
-public void addBinary(Binary value) {
-  parent.build(builder -> builder.appendAsString(value));
-}
-```
-
-The benchmark suite `VariantConverterBenchmark` compares the performance of these operations, and shows a consistent speedup.
-
-## Benchmark Critiques
+All benchmarks were implemented as JMH benchmarks within the parquet and iceberg
+source trees, in `parquet-benchmark` for Parquet and `core/src/jmh` and `spark/v4.1/spark` for Iceberg
 
 Before reaching conclusions about the performance of the libraries, it is worthwhile considering whether the
 benchmarks themselves are flawed -as such flaws would negate the the conclusions.
 
-* Hardware setup. Unrealistic and not isolated enough, and without native filesystem and compression libraries
-  A rerun on x86 server would be better.
-* File sizes too small.
-* Unrealistic variant records.
 * Inefficient Spark queries.
+* Hardware setup.
+* Unrealistic variant records.
+* File sizes too small.
+* Single host queries.
+* AI used to help generate the benchmarks
 
 Spark queries were originally a mix of RDD-era operations 
 ```java
@@ -347,3 +226,278 @@ spark().sql("SELECT id FROM variant_table WHERE variant_get(nested, '$.varcatego
 ```
 
 The results did change after this, with a key difference being that time differences between projecting on a variant field and a parquet column were no longer observable/significant.
+That is: the performance hit of a `variant_get()` call retrieving a column was actually the SQL rather than retrieval.
+
+### Tests were conducted on an ARM-based laptop not an x86 system.
+
+The tests were conducted on an M1 MacBook Pro with 32 MB RAM.
+This doesn't resemble production systems, and comes with the following differences which may affect results
+
+* It has a different CPU, memory and storage architecture from the majority of systems running Iceberg queries.
+* It has a clock resolution of 50 MHz, unlike the CPU-clock-cycle resolution the x86 `rdtscp` and `rdpmc` opcodes deliver.
+* Use of the laptop while tests are in progress will affect results.
+
+Fix: run in EC2 on an `r5a.large` instance; this has 16 GB RAM so the risk of Gradle triggering swapping during a run is low.
+We are still left with the noisy-neighbour problem. 
+I've not made any attempt to address that here.
+
+A key discovery of that part of the experiment is how outdated the "large" sizes is as 2 CPUs and 16 GB RAM is not large any more --and that even M1 MBPs are fast in comparison for compilation: 30 minutes versus 15.
+
+Given the numbers are ratios are similar the use of an x86 EC2 VM wasn't necessary, though it does make the conclusions more defensible.
+
+### The Variant Structure is Unrealistic
+
+This is likely true.
+Given that the metadata of a variant is parsed on every signle row, the more complex a variant is, the longer the parse
+time is likely to be, with consequential impact on query performance.
+If row filtering on shredded columns was performant, at least this parsing would only be needed on filtered columns.
+Meanwhile, it's something else to benchmark and tune in future work.
+
+### File Sizes are Too Small
+
+Inevitably, as the benchmark is designed to be fast.
+But does that explain the mismatch between filter times when filtering on a variant field rather than a parquet column?
+
+### Single Host Queries
+
+Spark is running on a single host, indeed possibly as a single thread.
+While this means query execution performance will be significantly degraded compared to a real
+cluster, it shouldn't explain the results.
+
+### AI Assistance
+
+I used AI to generate the materializers for the Parquet benchmarks and other
+aspects of it, then cleaned this up by merging the (many) classes it had
+generated for the file and lean schemas into one class.
+
+I don't see any obvious inefficiences in the design, but it is not something
+I've done by hand before.
+
+# Iceberg query benchmarks
+
+The iceberg query benchmarks generated the a test dataset as: Parquet Unshredded, Parquet Shredded and Avro.
+Variants are stored in the Avro files using Iceberg's variant ser/deser code.
+
+
+## Table setup
+
+Tables were generated within the local filesystem of four files, each with 250,000 elements,
+resulting into 1M records overall.
+* Compression was disabled.
+* Partitioning was not enabled.
+* In the absence of of [#14707 Vectorized read for variant](https://github.com/apache/iceberg/issues/14707) vectorization was disabled.    
+
+
+```java
+protected Table initTable() {
+  HadoopTables tables = new HadoopTables(hadoopConf());
+  Map<String, String> properties = Maps.newHashMap();
+  properties.put(TableProperties.FORMAT_VERSION, "3");
+  properties.put(TableProperties.SPLIT_OPEN_FILE_COST, Integer.toString(128 * 1024 * 1024));
+  // turn off compression to remove it as a factor.
+  properties.put(TableProperties.METADATA_COMPRESSION, "none");
+  properties.put(TableProperties.PARQUET_COMPRESSION, "none");
+  properties.put(TableProperties.AVRO_COMPRESSION, "none");
+  // variant projection pushdown not supported with the vectorized reader.
+  properties.put(TableProperties.PARQUET_VECTORIZATION_ENABLED, "false");
+
+  return tables.create(SCHEMA, PartitionSpec.unpartitioned(), properties, newTableLocation());
+}
+
+```
+
+## Iceberg Benchmark Results
+
+| Benchmark                                                              | Results                             | Source                                                                                                                                                                                  |
+|------------------------------------------------------------------------|-------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [IcebergSourceVariantIOBenchmark](results/iceberg/index.html)          | Spark SQL Queries on Iceberg tables | [source](https://github.com/steveloughran/iceberg/blob/pr/benchmark-variant/spark/v4.1/spark/src/jmh/java/org/apache/iceberg/spark/source/parquet/IcebergSourceVariantIOBenchmark.java) |
+
+
+In the [benchmark results](results/iceberg/index.html), Avro is the topmost file type of every benchmark,
+followed by unshredded Parquet, and finally shredded Parquet.
+
+![file types](images/iceberg-benchmark-file-types-wide.png)
+
+All simple projection operations take a similar amount of time when executed through the Spark SQL API.
+
+```sql
+SELECT category FROM variant_table
+SELECT variant_get(nested, '$.varcategory', 'int') FROM variant_table
+```
+
+![projections](images/iceberg-variant-project.png)
+
+What is very different is any filtering query with a variant in the `WHERE` clause, e.g.
+
+```sql
+SELECT id WHERE variant_get(nested, '$.varcategory', 'int') = 5
+```
+
+This query takes a long longer to complete than the query against the equivalent parquet column:
+
+```sql
+SELECT id WHERE category = 5
+```
+
+![filter](images/iceberg-filter-operations.png)
+
+The filtering was *worse* with shredded variants.
+This implies that whatever predicate-pushdown based filtering on variant fields there is, it isn't
+looking at shredded field statistics.
+
+## Parquet Benchmark Results
+
+
+| Benchmark                                                              | Results                             | Source                                                                                                                                                                                  |
+|------------------------------------------------------------------------|-------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [Parquet](results/parquet)                                             | Parquet Variant Benchmarks          | [source](https://github.com/steveloughran/parquet-mr/tree/pr/benchmark-variant/parquet-benchmarks/src/main/java/org/apache/parquet/variant)                                             | 
+
+### VariantBuilder Benchmark
+
+The parquet variant builder benchmarked probed for scale issues as variants grew wider or deeper.
+
+![parquet variant builder](images/parquet-variant-builder.png)
+
+No particular issues were see *in this specific benchmark*, though changes to the builder have now been proposed.
+
+## Parquet Variant Projection
+
+This benchmark was interesting.
+
+![parquet variant builder](images/parquet-variant-projection.png)
+
+The first benchmark, `readAllRecords` just reads all records and all colums, where the helper method `consumeField()` consumes a filed within the supplied variant.
+It should be the worst of the projection benchmarks, and it is, especially for shredded variants.
+
+```java
+
+public void readAllRecords(Blackhole blackhole) throws IOException {
+  try (ParquetReader<RowRecord> reader =
+      new RowReaderBuilder(HadoopInputFile.fromPath(dataFile, conf), false).build()) {
+    RowRecord row;
+    while ((row = reader.read()) != null) {
+      blackhole.consume(row.id);
+      blackhole.consume(row.category);
+      consumeField(row.variant, "varid", v -> blackhole.consume(v.getLong()));
+      consumeField(row.variant, "varcategory", v -> blackhole.consume(v.getInt()));
+      consumeField(row.variant, "idstr", v -> blackhole.consume(v.getString()));
+      consumeField(row.variant, "col4", v -> blackhole.consume(v.getString()));
+    }
+  }
+}
+  
+private void consumeField(Variant nested, String key, Consumer<Variant> consume) {
+  Variant variant = nested.getFieldByKey(key);
+  if (variant != null) {
+    consume.accept(variant);
+  }
+}
+```
+
+The subsequent two benchmarks are unusual.
+
+To read only a subset of the data, a "lean" parquet schema was created.
+This declares that the `varcategory` field may be found as a shredded field.
+It does not contain any declaration about any variand fields whic are not needed.
+
+```parquet
+message vschema {  
+  required int64 id;  
+  required int32 category;  
+  optional group nested (VARIANT(1)) {  
+    required binary metadata;  
+    optional binary value;  
+    optional group typed_value {  
+    required group varcategory { optional binary value; optional int32 typed_value;}  
+    }  
+  }  
+}
+```
+
+When used against a shreddeed file, this lean schema is the delivers the
+fastest read times, 50% faster than reading an unshredded file with the same
+schema.
+
+However, when the file schema is read used,
+if the file is unshredded, that is the schema which delivers the performance
+gains.
+The lean schema is now the slow schema.
+
+What does this mean?
+
+I'm not going to come to any conclusions about why this behaviour was observed.
+It's clearly some aspect of the implementation -the question is: what does it mean?
+
+1. If you are reading fields in a variant, and you know the field is a shredded
+   variant then explicitly asking for it _and only it_ is a performance boost.
+2. If you know the variant is not shredded, generating a schema which declares
+   that the shredded fields may exist is worse than a schema which declares no shredding.
+
+If this result holds up elsewhere, it argues for projection operations to
+look at the schema of variants and only scan with a lean schema if the variant
+is shredded.
+If the target variant is unshredded, declaring the optional variant fields is
+suboptimal.
+
+## Profile-driven Parquet Improvements
+
+Running the VariantProjectionBenchmark under a profiler highlighted that:
+1. VariantConverters took a lot of the CPU time.
+2. String unmarshalling took a large fraction of this and involved two stages of memory allocation and copy,
+
+
+In class `VariantConverters.VariantStringConverter`, a `Binary` is added o the builder by converting to a string then
+calling `appendString()`.
+```java
+static class VariantStringConverter extends ShreddedScalarConverter {
+  VariantStringConverter(ParentConverter<VariantBuilder> parent) {
+    super(parent);
+  }
+
+  @Override
+  public void addBinary(Binary value) {
+    parent.build(builder -> builder.appendString(value.toStringUsingUTF8()));
+  }
+}
+```
+
+The `appendString()` operation immediately gets the bytes and processes them.
+```java
+public void appendString(String str) {
+  onAppend();
+  byte[] data = str.getBytes(StandardCharsets.UTF_8);
+  ...
+}
+```
+
+Factoring all the work performed on the `data` bytearray, permits a new `appendAsString(Binary binary)` method to be added
+```java
+void appendAsString(Binary binary) {
+  onAppend();
+  writeUTF8bytes(binary.getBytesUnsafe());
+}
+```
+Which can be invoked without perfoming any needless byte-string-byte conversion and copy.
+
+```java
+class VariantStringConverter {
+  ...
+  public void addBinary(Binary value) {
+    parent.build(builder -> builder.appendAsString(value));
+  }
+}
+```
+
+The benchmark suite `VariantConverterBenchmark` compares the performance of these operations, and shows a consistent speedup.of the proposed `appendStringAsBinary()` operation compared to the current `appendStringAsString()` sequence.
+
+![variant converter bar chart](images/parquet-variant-converter.png)
+
+This enhancement is in the PR; the new `appendAsString(Binary binary)` method is package-private so does not change
+the public API.
+Note that the benchmark graphs in this document are shown after this improvement has been applied.
+
+# Conclusions
+
+* Variant performance is inconsistent and unpredictable.
+* Understanding and addressing this is critical once automatic shedding is
+  added to Iceberg.
