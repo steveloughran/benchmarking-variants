@@ -1,0 +1,2611 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8'>
+<style>
+	body {margin: 0; padding: 10px 10px 22px 10px; background-color: #ffffff}
+	h1 {margin: 5px 0 0 0; font-size: 18px; font-weight: normal; text-align: center}
+	header {margin: -24px 0 5px 0; line-height: 24px}
+	button {font: 12px sans-serif; cursor: pointer}
+	p {position: fixed; bottom: 0; margin: 0; padding: 2px 3px 2px 3px; outline: 1px solid #ffc000; display: none; overflow: hidden; white-space: nowrap; background-color: #ffffe0}
+	a {color: #0366d6}
+	#hl {position: absolute; display: none; overflow: hidden; white-space: nowrap; pointer-events: none; background-color: #ffffe0; outline: 1px solid #ffc000; height: 15px}
+	#hl span {padding: 0 3px 0 3px}
+	#status {left: 0}
+	#match {right: 0}
+	#reset {cursor: pointer}
+	#canvas {width: 100%; height: 592px}
+</style>
+</head>
+<body style='font: 12px Verdana, sans-serif'>
+<h1>CPU profile</h1>
+<header style='text-align: left'><button id='inverted' title='Invert'>&#x1f53b;</button>&nbsp;&nbsp;<button id='search' title='Search'>&#x1f50d;</button></header>
+<header style='text-align: right'>Produced by <a href='https://github.com/async-profiler/async-profiler'>async-profiler</a></header>
+<canvas id='canvas'></canvas>
+<div id='hl'><span></span></div>
+<p id='status'></p>
+<p id='match'>Matched: <span id='matchval'></span> <span id='reset' title='Clear'>&#x274c;</span></p>
+<script>
+	// Copyright The async-profiler authors
+	// SPDX-License-Identifier: Apache-2.0
+	'use strict';
+	let root, px, pattern;
+	let level0 = 0, left0 = 0, width0 = 0;
+	let nav = [], navIndex, matchval;
+	let inverted = true;
+	const levels = Array(37);
+	for (let h = 0; h < levels.length; h++) {
+		levels[h] = [];
+	}
+
+	const canvas = document.getElementById('canvas');
+	const c = canvas.getContext('2d');
+	const hl = document.getElementById('hl');
+	const status = document.getElementById('status');
+
+	const canvasWidth = canvas.offsetWidth;
+	const canvasHeight = canvas.offsetHeight;
+	canvas.style.width = canvasWidth + 'px';
+	canvas.width = canvasWidth * (devicePixelRatio || 1);
+	canvas.height = canvasHeight * (devicePixelRatio || 1);
+	if (devicePixelRatio) c.scale(devicePixelRatio, devicePixelRatio);
+	c.font = document.body.style.font;
+
+	const palette = [
+		[0xb2e1b2, 20, 20, 20],
+		[0x50e150, 30, 30, 30],
+		[0x50cccc, 30, 30, 30],
+		[0xe15a5a, 30, 40, 40],
+		[0xc8c83c, 30, 30, 10],
+		[0xe17d00, 30, 30,  0],
+		[0xcce880, 20, 20, 20],
+	];
+
+	function getColor(p) {
+		const v = Math.random();
+		return '#' + (p[0] + ((p[1] * v) << 16 | (p[2] * v) << 8 | (p[3] * v))).toString(16);
+	}
+
+	function f(key, level, left, width, inln, c1, int) {
+		levels[level0 = level].push({level, left: left0 += left, width: width0 = width || width0,
+			color: getColor(palette[key & 7]), title: cpool[key >>> 3],
+			details: (int ? ', int=' + int : '') + (c1 ? ', c1=' + c1 : '') + (inln ? ', inln=' + inln : '')
+		});
+	}
+
+	function u(key, width, inln, c1, int) {
+		f(key, level0 + 1, 0, width, inln, c1, int)
+	}
+
+	function n(key, width, inln, c1, int) {
+		f(key, level0, width0, width, inln, c1, int)
+	}
+
+	function samples(n) {
+		return n === 1 ? '1 sample' : n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') + ' samples';
+	}
+
+	function pct(a, b) {
+		return a >= b ? '100' : (100 * a / b).toFixed(2);
+	}
+
+	function findFrame(frames, x) {
+		let left = 0;
+		let right = frames.length - 1;
+
+		while (left <= right) {
+			const mid = (left + right) >>> 1;
+			const f = frames[mid];
+
+			if (f.left > x) {
+				right = mid - 1;
+			} else if (f.left + f.width <= x) {
+				left = mid + 1;
+			} else {
+				return f;
+			}
+		}
+
+		if (frames[left] && (frames[left].left - x) * px < 0.5) return frames[left];
+		if (frames[right] && (x - (frames[right].left + frames[right].width)) * px < 0.5) return frames[right];
+
+		return null;
+	}
+
+	function removeStack(left, width) {
+		for (let h = 0; h < levels.length; h++) {
+			const frames = levels[h], newFrames = [];
+			for (let i = 0; i < frames.length; i++) {
+				const f = frames[i];
+				if (f.left >= left + width) {
+					f.left -= width;
+				} else if (f.left + f.width > left) {
+					if ((f.width -= width) <= 0 && h) continue;
+				}
+				newFrames.push(f);
+			}
+			levels[h] = newFrames;
+		}
+	}
+
+	function search(r) {
+		if (r === true && (r = prompt('Enter regexp to search:', '')) === null) {
+			return;
+		}
+
+		pattern = r ? RegExp(r) : undefined;
+		const matched = render(root, nav = []);
+		navIndex = -1;
+		document.getElementById('matchval').textContent = matchval = pct(matched, root.width) + '%';
+		document.getElementById('match').style.display = r ? 'inline-block' : 'none';
+	}
+
+	function render(newRoot, nav) {
+		if (root) {
+			c.fillStyle = '#ffffff';
+			c.fillRect(0, 0, canvasWidth, canvasHeight);
+		}
+
+		root = newRoot || levels[0][0];
+		px = canvasWidth / root.width;
+
+		const x0 = root.left;
+		const x1 = x0 + root.width;
+		const marked = [];
+
+		function mark(f) {
+			return marked[f.left] || (marked[f.left] = f);
+		}
+
+		function totalMarked() {
+			let total = 0;
+			let left = 0;
+			Object.keys(marked).sort(function(a, b) { return a - b; }).forEach(function(x) {
+				if (+x >= left) {
+					const m = marked[x];
+					if (nav) nav.push(m);
+					total += m.width;
+					left = +x + m.width;
+				}
+			});
+			return total;
+		}
+
+		function drawFrame(f, y) {
+			if (f.left < x1 && f.left + f.width > x0) {
+				c.fillStyle = pattern && f.title.match(pattern) && mark(f) ? '#ee00ee' : f.color;
+				c.fillRect((f.left - x0) * px, y, f.width * px, 15);
+
+				if (f.width * px >= 21) {
+					const chars = Math.floor(f.width * px / 7);
+					const title = f.title.length <= chars ? f.title : f.title.substring(0, chars - 2) + '..';
+					c.fillStyle = '#000000';
+					c.fillText(title, Math.max(f.left - x0, 0) * px + 3, y + 12, f.width * px - 6);
+				}
+
+				if (f.level < root.level) {
+					c.fillStyle = 'rgba(255, 255, 255, 0.5)';
+					c.fillRect((f.left - x0) * px, y, f.width * px, 15);
+				}
+			}
+		}
+
+		for (let h = 0; h < levels.length; h++) {
+			const y = inverted ? h * 16 : canvasHeight - (h + 1) * 16;
+			const frames = levels[h];
+			for (let i = 0; i < frames.length; i++) {
+				drawFrame(frames[i], y);
+			}
+		}
+
+		return totalMarked();
+	}
+
+	function unpack(cpool) {
+		for (let i = 1; i < cpool.length; i++) {
+			cpool[i] = cpool[i - 1].substring(0, cpool[i].charCodeAt(0) - 32) + cpool[i].substring(1);
+		}
+	}
+
+	canvas.onmousemove = function() {
+		const h = Math.floor((inverted ? event.offsetY : (canvasHeight - event.offsetY)) / 16);
+		if (h >= 0 && h < levels.length) {
+			const f = findFrame(levels[h], event.offsetX / px + root.left);
+			if (f) {
+				if (f !== root) getSelection().removeAllRanges();
+				hl.style.left = (Math.max(f.left - root.left, 0) * px + canvas.offsetLeft) + 'px';
+				hl.style.width = (Math.min(f.width, root.width) * px) + 'px';
+				hl.style.top = ((inverted ? h * 16 : canvasHeight - (h + 1) * 16) + canvas.offsetTop) + 'px';
+				hl.firstChild.textContent = f.title;
+				hl.style.display = 'block';
+				canvas.title = f.title + '\n(' + samples(f.width) + f.details + ', ' + pct(f.width, levels[0][0].width) + '%)';
+				canvas.style.cursor = 'pointer';
+				canvas.onclick = function() {
+					if (event.altKey && h >= root.level) {
+						removeStack(f.left, f.width);
+						root.width > f.width ? render(root) : render();
+					} else if (f !== root) {
+						render(f);
+					}
+					canvas.onmousemove();
+				};
+				status.textContent = 'Function: ' + canvas.title;
+				status.style.display = 'inline-block';
+				return;
+			}
+		}
+		canvas.onmouseout();
+	}
+
+	canvas.onmouseout = function() {
+		hl.style.display = 'none';
+		status.style.display = 'none';
+		canvas.title = '';
+		canvas.style.cursor = '';
+		canvas.onclick = null;
+	}
+
+	canvas.ondblclick = function() {
+		getSelection().selectAllChildren(hl);
+	}
+
+	document.getElementById('inverted').onclick = function() {
+		inverted = !inverted;
+		render();
+	}
+
+	document.getElementById('search').onclick = function() {
+		search(true);
+	}
+
+	document.getElementById('reset').onclick = function() {
+		search(false);
+	}
+
+	window.onkeydown = function(event) {
+		if ((event.ctrlKey || event.metaKey) && event.key === 'f') {
+			event.preventDefault();
+			search(true);
+		} else if (event.key === 'Escape') {
+			search(false);
+		} else if ((event.key === 'n' || event.key === 'N') && nav.length > 0) {
+			navIndex = (navIndex + (event.shiftKey ? nav.length - 1 : 1)) % nav.length;
+			render(nav[navIndex]);
+			document.getElementById('matchval').textContent = matchval + ' (' + (navIndex + 1) + ' of ' + nav.length + ')';
+			window.scroll(0, inverted ? root.level * 16 : canvasHeight - (root.level + 1) * 16);
+			canvas.onmousemove();
+		}
+	}
+
+const cpool = [
+'all',
+' AbsSeq::davg',
+'!llocTracer::send_allocation_in_new_tlab',
+' BCEscapeAnalyzer::BCEscapeAnalyzer',
+'2compute_escape_info',
+'2iterate_blocks',
+':one_block',
+'!arrierSetC2::load_at',
+'5_resolved',
+' C2Compiler::compile_method',
+'!ardTableBarrierSet::on_slowpath_allocation_exit',
+'!mpUNode::Value',
+'*sub',
+'!odeCache::allocate',
+'+find_compiled',
+'$Heap::allocate',
+'"llectedHeap::array_allocate',
+'/print_heap_before_gc',
+'"mpilation::Compilation',
+'-build_hir',
+'-compile_java_method',
+'5method',
+'-emit_code_body',
+'2lir',
+'&e::Code_Gen',
+'+mpile',
+')Optimize',
+')optimize_loops',
+'\'Broker::compiler_thread_loop',
+'/invoke_compiler_on_method',
+'/post_compile',
+'\'r::compile_method',
+'$ositeElapsedCounterSource::now',
+'"ncurrentGCThread::run',
+'#nectionGraph::compute_escape',
+'1do_analysis',
+'1process_call_arguments',
+'"unterOverflowStub::visit',
+' DIR_Chunk* GrowableArrayWithAllocator<DIR_Chunk*, GrowableArray<DIR_Chunk*>>::insert_sorted<&DIR_Chunk::compare(DIR_Chunk* const&, DIR_Chunk* const&)>',
+'!ebugInformationRecorder::describe_scope',
+' FormatStringEventLog<256ul>::log',
+'@v',
+' G1AllocRegion::new_alloc_region_and_allocate',
+'\'ator::survivor_attempt_allocation',
+'"BatchedGangTask::work',
+'"CodeBlobClosure::HeapRegionGatheringOopClosure::do_oop',
+'3do_code_blob',
+'&RootSet::nmethods_do',
+'$llectedHeap::allocate_new_tlab',
+'2ttempt_allocation_slow',
+'1capacity',
+'1do_collection_pause_at_safepoint',
+'Q_helper',
+'1new_mutator_alloc_region',
+'1post_evacuate_collection_set',
+'1retire_mutator_alloc_region',
+')ionSet::add_young_region_common',
+'1iterate_incremental_part_from',
+'9part_from',
+'$mmittedRegionMap::num_active',
+'"EvacPhaseWithTrimTimeTracker::G1EvacPhaseWithTrimTimeTracker',
+'@~G1EvacPhaseWithTrimTimeTracker',
+'&uateRegionsBaseTask::work',
+'1Task::evacuate_live_objects',
+'7scan_roots',
+'"HeapPrinterMark::G1HeapPrinterMark',
+'"MonitoringSupport::recalculate_sizes',
+'5update_eden_size',
+'"NmethodProcessor::do_regular_processing',
+'"PLABAllocator::allocate_direct_or_new_plab',
+'#arEvacuateFollowersClosure::do_void',
+'?offer_termination',
+'%ScanThreadState::G1ParScanThreadState',
+'6allocate_copy_slow',
+'6do_copy_to_survivor_space',
+'6trim_queue_to_threshold',
+'4Set::state_for_worker',
+'#olicy::predict_region_non_copy_time_ms',
+'-ventive_collection_required',
+'$stEvacuateCollectionSetCleanupTask2::RedirtyLoggedCardsTask::do_work',
+'#repareEvacuationTask::work',
+'"RemSet::prepare_region_for_scan',
+'*scan_collection_set_regions',
+'/heap_roots',
+'#ootProcessor::evacuate_roots',
+'1process_java_roots',
+'"ScanCollectionSetRegionClosure::do_heap_region',
+'#erviceThread::run_service',
+'1sleep_before_next_cycle',
+'!CHeapLog::log_heap',
+'!angWorker::run',
+'!raphBuilder::GraphBuilder',
+'.invoke',
+'/terate_all_blocks',
+'6bytecodes_for_block',
+'.try_inline',
+'8_full',
+'%Kit::access_load_at',
+'*make_load',
+'"owableArrayWithAllocator<DIR_Chunk*, GrowableArray<DIR_Chunk*>>::grow',
+' HeapRegionManager::par_iterate',
+'*Tracer::send_region_type_change',
+' I2C/C2I adapters',
+'!R::IR',
+'$eliminate_null_checks',
+'"Scope::IRScope',
+'!dealLoopTree::iteration_split',
+'>_impl',
+'/policy_unroll',
+'<_slp_analysis',
+'!nstanceKlass::allocate_objArray',
+'/check_valid_for_instantiation',
+'"terval::split',
+'(Walker::walk_to',
+' JVM_GetCallerClass',
+'!avaFrameAnchor::make_walkable',
+'$Thread::oops_do_frames',
+',thread_main_inner',
+' LIR_Assembler::comp_op',
+'/emit_code',
+'4lir_list',
+'!inearScan::allocate_registers',
+'-ssign_reg_num',
+',do_linear_scan',
+'*Walker::activate_current',
+'3lloc_free_reg',
+'2split_before_usage',
+'!oadNode::make',
+' MachNode::ideal_reg',
+'*size',
+'"tcher::ReduceInst',
+'3_Interior',
+')match',
+'._tree',
+')xform',
+'!emAllocator::Allocation::notify_allocation',
+'.allocate',
+'6_inside_tlab_slow',
+'#oryPool::max_size',
+',record_peak_memory_usage',
+'&Service::track_memory_usage',
+'!onitor::wait_without_safepoint_check',
+'!utatorAllocRegion::retire',
+'#ex::lock_without_safepoint_check',
+' Node::is_CFG',
+'&rematerialize',
+' ObjArrayAllocator::initialize',
+'#ectSampler::is_created',
+'!ptimizer::eliminate_null_checks',
+'#oRuntime::new_array_C',
+' ParallelOopsDoThreadClosure::do_thread',
+'#ker::park',
+'#se::Parse',
+'\'array_addressing',
+'-store',
+'\'do_all_blocks',
+'*call',
+'*field_access',
+'*get_xxx',
+'*one_block',
+'%Generator::generate',
+'!haseCCP::analyze',
+'&haitin::Register_Allocate',
+'.Split',
+'.build_ifg_physical',
+'8virtual',
+'%GVN::transform_no_reclaim',
+'%IFG::Compute_Effective_Degree',
+'*effective_degree',
+'&dealLoop::build_and_optimize',
+'0optimize',
+'0split_if_with_blocks',
+'%Output::Output',
+'-Process_OopMap_Node',
+'-fill_buffer',
+'-install',
+'4_code',
+'!redictedCallGenerator::generate',
+' RedirtyLoggedCardTableEntryClosure::do_card_ptr',
+'!untime1::new_object_array',
+' SharedRuntime::handle_wrong_method',
+'!pinPause',
+'!tate::MachNodeGenerator',
+'%Split::input_values_do',
+'!uperWord::unrolling_analysis',
+' TaskTerminator::offer_termination',
+'!hread::call_run',
+'&LocalAllocBuffer::retire_before_allocation',
+'&s::possibly_parallel_oops_do',
+';threads_do',
+'!ype::hashcons',
+'$NarrowOop::make_same_narrowptr',
+' Unsafe_CompareAndSetReference',
+'\'Park',
+' VMThread::evaluate_operation',
+'*inner_execute',
+'*run',
+'*wait_for_operation',
+'"_G1CollectForAllocation::doit',
+'#Operation::evaluate',
+'!ectorNode::implemented',
+',opcode',
+' WatcherThread::run',
+'/sleep',
+'!orkGang::run_task',
+' [unknown]',
+' __psynch_cvwait',
+')mutexdrop',
+'.wait',
+'"vfprintf',
+'!new_array_Java',
+'!platform_memset$VARIANT$Rosetta',
+'*strchr$VARIANT$Base',
+'"thread_mutex_firstfit_lock_slow',
+'8unlock_slow',
+')start',
+'!tlv_get_addr',
+'!vsnprintf',
+' ciBytecodeStream::get_method',
+'"Env::get_method_by_index_impl',
+'\'register_method',
+'"Method::ciMethod',
+'*get_bcea',
+'"ObjectFactory::create_new_metadata',
+'1get_metadata',
+' fast_new_instance Runtime1 stub',
+' java/io/BufferedOutputStream.flush',
+'BBuffer',
+'=write',
+'(ObjectOutputStream$BlockDataOutputStream.drain',
+'Qflush',
+'Qwrite',
+':.defaultWriteFields',
+'GObject',
+';flush',
+';writeArray',
+'@Byte',
+'@ClassDesc',
+'Iriptor',
+'@NonProxyDesc',
+'@Object',
+'F0',
+'ArdinaryObject',
+'@SerialData',
+'.StreamClass.invokeWriteObject',
+':writeNonProxy',
+'4Field.getTypeCode',
+'%lang/Object.getClass',
+'*Thread.run',
+'*reflect/Method.invoke',
+'%net/Socket$SocketOutputStream.write',
+'&io/Buffer.<init>',
+'0capacity',
+'0limit',
+'0position',
+'*yteBuffer.<init>',
+'4limit',
+'4position',
+'5ut',
+'4wrap',
+')HeapByteBuffer.<init>',
+'8asReadOnlyBuffer',
+'8get',
+'8ix',
+'7R.<init>',
+'%util/AbstractQueue.add',
+';All',
+'+rrayList.addAll',
+'4grow',
+'4size',
+'4toArray',
+'4writeObject',
+'/s.copyOf',
+'*concurrent/ConcurrentHashMap$ValuesView.iterator',
+'6yclicBarrier.await',
+'Cdowait',
+'5ExecutorCompletionService$QueueingFuture.done',
+'N.<init>',
+'OnewTaskFor',
+'Opoll',
+'Osubmit',
+'=s$RunnableAdapter.call',
+'5ForkJoinPool.managedBlock',
+'BunmanagedBlock',
+'6utureTask.finishCompletion',
+'@run',
+'@set',
+'5LinkedBlockingQueue.<init>',
+'Ioffer',
+'Ipoll',
+'IsignalNotEmpty',
+'Itake',
+'5ThreadPoolExecutor$Worker.run',
+'OtryRelease',
+'Ounlock',
+'G.getTask',
+'HrunWorker',
+'5locks/AbstractQueuedSynchronizer$ConditionNode.block',
+'disReleasable',
+'_Object.await',
+'kNanos',
+'fdoSignal',
+'fsignal',
+'U.enqueue',
+'Vrelease',
+'VsetState',
+'WignalNext',
+'VtryInitializeHead',
+';LockSupport.park',
+'KNanos',
+'Gunpark',
+';ReentrantLock$NonfairSync.initialTryLock',
+'ISync.isHeldExclusively',
+'Nlock',
+'H.lock',
+'Iunlock',
+'!byte_arraycopy',
+'&disjoint_arraycopy',
+'!dk/internal/misc/Unsafe.compareAndSetReference',
+'9park',
+'-reflect/DelegatingMethodAccessorImpl.invoke',
+'5GeneratedMethodAccessor1.invoke',
+'5NativeMethodAccessorImpl.invoke',
+'T0',
+'5Reflection.getCallerClass',
+'$proxy1/$Proxy0.iteration',
+'<Result',
+'!io_vsnprintf',
+'!ni_GetObjectClass',
+' new_object_array Runtime1 stub',
+'!method::new_nmethod',
+')oops_do',
+'0_process_weak',
+' org/apache/parquet/io/api/Binary$ByteArrayBackedBinary.getBytesUnsafe',
+'3variant/MetadataBuilder.<init>',
+'KgetEncodedBuffer',
+';Variant.<init>',
+'BBuilder.<init>',
+'JappendAsString',
+'Jbuild',
+'JwriteUTF8bytes',
+'BConverterBenchmark.appendStringAsBinary',
+'BUtil.writeLong',
+';jmh_generated/VariantConverterBenchmark_appendStringAsBinary_jmhTest._jmh_tryInit_f_variantconverterbenchmark0_G',
+'.appendStringAsBinary_SingleShotTime',
+'.appendStringAsBinary_ss_jmhStub',
+'$openjdk/jmh/results/Result.<init>',
+'8SingleShotResult.<init>',
+'1unner/BaseRunner.doSingle',
+'BrunBenchmark',
+'NsForked',
+'8enchmarkHandler$$Lambda$35.0x000000013e0257e8.run',
+'HBenchmarkTask.call',
+'G.access$300',
+'HcaptureUnusedWorkerData',
+'HgetWorkerData',
+'HrunIteration',
+'7ForkedMain.main',
+'=Runner$1.accept',
+'C.run',
+'7InfraControl.<init>',
+'CL3.<init>',
+'D4.<init>',
+'7link/BinaryLinkClient$$Lambda$8.0x000000013e001c70.invoke',
+'L.lambda$new$0',
+'MpushFrame',
+'QResults',
+'<ResultsFrame.<init>',
+'!s::PlatformMonitor::wait',
+'$elapsed_counter',
+'$javaTimeNanos',
+'$vsnprintf',
+'!utputStream::print_cr',
+' pthread_self',
+' semaphore_signal_trap',
+'*wait_trap',
+'!tub:mach_absolute_time',
+'!un/nio/ch/FileDispatcherImpl.write0',
+'+NativeThread.current',
+',ioSocketImpl$2.write',
+'8.beginWrite',
+'9implWrite',
+'9tryWrite',
+'9write',
+'+SocketDispatcher.write',
+'!wtch_pri',
+' thread_native_entry',
+'\'start',
+' vframeStreamCommon::fill_from_frame',
+'4security_next',
+'!oid G1ParCopyClosure<(G1Barrier)2, false>::do_oop_work<oopDesc*>',
+'!snprintf',
+' write',
+'"ong_method_stub'
+];
+unpack(cpool);
+
+n(3,756)
+u(12,1)
+u(620)
+u(452)
+u(444)
+u(1140)
+u(396)
+u(388)
+u(1100)
+u(1092)
+u(132)
+u(1196)
+u(1683)
+u(2698)
+u(2729)
+u(2760)
+u(2758,1,0,1,0)
+u(2574,1,0,1,0)
+u(2566,1,0,1,0)
+u(1998,1,0,1,0)
+u(2816)
+u(2816)
+u(2286,1,0,1,0)
+u(2248)
+u(2286,1,0,1,0)
+u(2368)
+u(2336)
+u(1984)
+f(52,1,1)
+u(44)
+u(36)
+u(28)
+u(1780)
+u(292)
+u(276)
+u(284)
+u(212)
+u(204)
+u(76)
+u(236)
+u(228)
+u(940)
+u(1492)
+u(3092)
+u(1723)
+u(3099)
+f(84,1,1)
+u(1683)
+u(2698)
+u(2729)
+u(2760)
+u(2752)
+u(2568)
+u(2560)
+u(1992)
+u(2816)
+u(2816)
+u(2280)
+u(2248)
+u(2280)
+u(2368)
+u(2336)
+u(1984)
+f(100,1,1)
+u(92)
+u(1332)
+u(1228)
+u(1236)
+u(1276)
+u(1244)
+u(1220)
+u(1284)
+u(1420)
+u(1252)
+u(1276)
+u(1244)
+u(1220)
+u(1284)
+u(1420)
+u(1252)
+u(1276)
+u(1244)
+u(1220)
+u(1284)
+u(1420)
+u(1252)
+u(1276)
+u(1244)
+u(1220)
+u(1284)
+u(204)
+u(76)
+u(236)
+u(228)
+u(940)
+u(1492)
+u(3092)
+u(1723)
+u(3099)
+f(116,1,1)
+u(1444)
+u(3147)
+u(1850)
+u(1858)
+u(1946)
+u(1938)
+u(1929)
+u(1886,1,0,1,0)
+u(1929)
+u(1858)
+u(1946)
+u(1938)
+u(1929)
+u(1926,1,0,1,0)
+u(2926,1,0,1,0)
+u(2918,1,0,1,0)
+u(2910,1,0,1,0)
+u(2608)
+u(2792)
+u(2792)
+u(2784)
+u(2800)
+u(2872)
+u(2856)
+f(124,1,1)
+u(108)
+u(2644)
+u(1764)
+u(1412)
+u(1404)
+u(196)
+u(204)
+u(76)
+u(236)
+u(228)
+u(940)
+u(1492)
+u(3092)
+u(1723)
+u(3099)
+f(132,1,1)
+u(1683)
+u(2698)
+u(2729)
+u(2760)
+u(2758,1,0,1,0)
+u(2574,1,0,1,0)
+u(2566,1,0,1,0)
+u(1998,1,0,1,0)
+u(2816)
+u(2816)
+u(2286,1,0,1,0)
+u(2248)
+u(2286,1,0,1,0)
+u(2368)
+u(2336)
+u(1984)
+f(300,1,1)
+u(980)
+u(988)
+u(188)
+u(164)
+u(172)
+u(148)
+u(252)
+u(236)
+u(228)
+u(940)
+u(1492)
+u(3092)
+u(1723)
+u(3099)
+f(348,1,1)
+u(556)
+u(588)
+u(596)
+u(604)
+u(564)
+u(508)
+u(500)
+u(724)
+u(1492)
+u(3092)
+u(1723)
+u(3099)
+f(428,1,1)
+u(396)
+u(388)
+u(1100)
+u(1092)
+u(132)
+u(1196)
+u(1683)
+u(2698)
+u(2729)
+u(2760)
+u(2758,1,0,1,0)
+u(2574,1,0,1,0)
+u(2566,1,0,1,0)
+u(1998,1,0,1,0)
+u(2816)
+u(2816)
+u(2286,1,0,1,0)
+u(2248)
+u(2286,1,0,1,0)
+u(2368)
+u(2336)
+u(1984)
+f(476,1,1)
+u(404)
+u(532)
+u(540)
+u(1140)
+u(396)
+u(388)
+u(1100)
+u(1092)
+u(132)
+u(1196)
+u(1683)
+u(2698)
+u(2729)
+u(2760)
+u(2758,1,0,1,0)
+u(2574,1,0,1,0)
+u(2566,1,0,1,0)
+u(1998,1,0,1,0)
+u(2816)
+u(2816)
+u(2286,1,0,1,0)
+u(2248)
+u(2286,1,0,1,0)
+u(2368)
+u(2336)
+u(1984)
+f(484,1,1)
+u(668)
+u(516)
+u(500)
+u(724)
+u(1492)
+u(3092)
+u(1723)
+u(3099)
+f(532,1,1)
+u(1140)
+u(396)
+u(388)
+u(1100)
+u(1092)
+u(132)
+u(1196)
+u(1683)
+u(2698)
+u(2729)
+u(2760)
+u(2758,1,0,1,0)
+u(2574,1,0,1,0)
+u(2566,1,0,1,0)
+u(1998,1,0,1,0)
+u(2816)
+u(2816)
+u(2286,1,0,1,0)
+u(2248)
+u(2286,1,0,1,0)
+u(2368)
+u(2336)
+u(1984)
+f(580,1,1)
+u(612)
+u(500)
+u(724)
+u(1492)
+u(3092)
+u(1723)
+u(3099)
+f(628,1,1)
+u(396)
+u(388)
+u(1100)
+u(1092)
+u(132)
+u(1196)
+u(1683)
+u(2698)
+u(2729)
+u(2760)
+u(2758,1,0,1,0)
+u(2574,1,0,1,0)
+u(2566,1,0,1,0)
+u(1998,1,0,1,0)
+u(2816)
+u(2816)
+u(2286,1,0,1,0)
+u(2248)
+u(2286,1,0,1,0)
+u(2368)
+u(2336)
+u(1984)
+f(652,1,1)
+u(804)
+u(644)
+u(724)
+u(1492)
+u(3092)
+u(1723)
+u(3099)
+f(756,1,1)
+u(748)
+u(732)
+u(844)
+u(828)
+u(156)
+u(164)
+u(172)
+u(148)
+u(252)
+u(236)
+u(228)
+u(940)
+u(1492)
+u(3092)
+u(1723)
+u(3099)
+f(796,1,1)
+u(308)
+u(316)
+u(1388)
+u(1396)
+u(1380)
+u(196)
+u(204)
+u(76)
+u(236)
+u(228)
+u(940)
+u(1492)
+u(3092)
+u(1723)
+u(3099)
+f(812,1,1)
+u(428)
+u(340)
+u(396)
+u(388)
+u(1100)
+u(1092)
+u(132)
+u(1196)
+u(1683)
+u(2698)
+u(2729)
+u(2760)
+u(2758,1,0,1,0)
+u(2574,1,0,1,0)
+u(2566,1,0,1,0)
+u(1998,1,0,1,0)
+u(2816)
+u(2816)
+u(2286,1,0,1,0)
+u(2248)
+u(2286,1,0,1,0)
+u(2368)
+u(2336)
+u(1984)
+f(819,1,1)
+u(1934,1,0,1,0)
+u(1643)
+f(892,1,1)
+u(1803)
+u(2302,1,0,1,0)
+u(2302,1,0,1,0)
+u(2216)
+u(2848)
+u(2792)
+u(2792)
+u(2784)
+u(2800)
+u(2872)
+u(2856)
+f(900,1,1)
+u(1012)
+u(1004)
+u(996)
+u(908)
+u(972)
+u(988)
+u(188)
+u(164)
+u(172)
+u(148)
+u(252)
+u(236)
+u(228)
+u(940)
+u(1492)
+u(3092)
+u(1723)
+u(3099)
+f(924,1,1)
+u(228)
+u(940)
+u(1492)
+u(3092)
+u(1723)
+u(3099)
+f(948,1,1)
+u(964)
+u(956)
+u(180)
+u(164)
+u(172)
+u(148)
+u(252)
+u(236)
+u(228)
+u(940)
+u(1492)
+u(3092)
+u(1723)
+u(3099)
+f(1028,1,1)
+u(1300)
+u(196)
+u(204)
+u(76)
+u(236)
+u(228)
+u(940)
+u(1492)
+u(3092)
+u(1723)
+u(3099)
+f(1036,1,1)
+u(1380)
+u(196)
+u(204)
+u(76)
+u(236)
+u(228)
+u(940)
+u(1492)
+u(3092)
+u(1723)
+u(3099)
+f(1108,1,1)
+u(1116)
+u(1124)
+u(420)
+u(412)
+u(1588)
+u(1596)
+u(1556)
+u(1564)
+u(1572)
+u(1492)
+u(3092)
+u(1723)
+u(3099)
+f(1156,1,1)
+u(1372)
+u(1356)
+u(1364)
+u(220)
+u(212)
+u(204)
+u(76)
+u(236)
+u(228)
+u(940)
+u(1492)
+u(3092)
+u(1723)
+u(3099)
+f(1164,1,1)
+u(1308)
+u(1300)
+u(196)
+u(204)
+u(76)
+u(236)
+u(228)
+u(940)
+u(1492)
+u(3092)
+u(1723)
+u(3099)
+f(1172,1,1)
+u(1092)
+u(132)
+u(1196)
+u(1683)
+u(2698)
+u(2729)
+u(2760)
+u(2758,1,0,1,0)
+u(2574,1,0,1,0)
+u(2566,1,0,1,0)
+u(1998,1,0,1,0)
+u(2816)
+u(2816)
+u(2286,1,0,1,0)
+u(2248)
+u(2286,1,0,1,0)
+u(2368)
+u(2336)
+u(1984)
+f(1180,1,1)
+u(20)
+u(1084)
+u(1092)
+u(132)
+u(884)
+u(1436)
+u(2635)
+u(2182,1,0,1,0)
+u(2178)
+u(2166,1,0,1,0)
+u(2142,1,0,1,0)
+u(2848)
+u(2792)
+u(2792)
+u(2784)
+u(2800)
+u(2872)
+u(2856)
+f(1292,1,1)
+u(212)
+u(204)
+u(76)
+u(236)
+u(228)
+u(940)
+u(1492)
+u(3092)
+u(1723)
+u(3099)
+f(1316,1,1,2)
+u(1300)
+u(196)
+u(204)
+u(76)
+u(236)
+u(228)
+u(940)
+u(1492)
+u(3092)
+u(1723)
+u(3099)
+f(1324,1,2,1)
+u(1300)
+u(196)
+u(204)
+u(76)
+u(236)
+u(228)
+u(940)
+u(1492)
+u(3092)
+u(1723)
+u(3099)
+f(1348,1,1)
+u(1340)
+u(1300)
+u(196)
+u(204)
+u(76)
+u(236)
+u(228)
+u(940)
+u(1492)
+u(3092)
+u(1723)
+u(3099)
+f(1428,1,1,2)
+u(636)
+u(356)
+u(724)
+u(1492)
+u(3092)
+u(1723)
+u(3099)
+f(1451,1,2)
+u(572)
+u(564)
+u(508)
+u(500)
+u(724)
+u(1492)
+u(3092)
+u(1723)
+u(3099)
+f(1460,1,2,1)
+u(1044)
+u(1052)
+u(1044)
+u(1068)
+u(1076)
+u(1060)
+u(196)
+u(204)
+u(76)
+u(236)
+u(228)
+u(940)
+u(1492)
+u(3092)
+u(1723)
+u(3099)
+f(1468,1,1)
+u(1188)
+u(836)
+u(156)
+u(164)
+u(172)
+u(148)
+u(252)
+u(236)
+u(228)
+u(940)
+u(1492)
+u(3092)
+u(1723)
+u(3099)
+f(1484,1,1,2)
+u(572)
+u(564)
+u(508)
+u(500)
+u(724)
+u(1492)
+u(3092)
+u(1723)
+u(3099)
+f(1500,1,2,1)
+u(1100)
+u(1092)
+u(132)
+u(1196)
+u(1683)
+u(2698)
+u(2729)
+u(2760)
+u(2758,1,0,1,0)
+u(2574,1,0,1,0)
+u(2566,1,0,1,0)
+u(1998,1,0,1,0)
+u(2816)
+u(2816)
+u(2286,1,0,1,0)
+u(2248)
+u(2286,1,0,1,0)
+u(2368)
+u(2336)
+u(1984)
+f(1532,1,1)
+u(1524)
+u(1020)
+u(788)
+u(68)
+u(60)
+u(780)
+u(1268)
+u(1260)
+u(1276)
+u(1244)
+u(1220)
+u(1284)
+u(204)
+u(76)
+u(236)
+u(228)
+u(940)
+u(1492)
+u(3092)
+u(1723)
+u(3099)
+f(1540,1,1)
+u(2545)
+u(2456)
+u(2430,1,0,1,0)
+u(2414,1,0,1,0)
+u(2422,1,0,1,0)
+u(2322)
+u(2310,1,0,1,0)
+u(2120)
+u(2214,1,0,1,0)
+u(2278,1,0,1,0)
+u(2290)
+u(2286,1,0,1,0)
+u(2368)
+u(2336)
+u(1984)
+f(1548,1,1)
+u(2553)
+u(2472)
+u(2400)
+u(2312)
+u(2232)
+u(2848)
+u(2792)
+u(2792)
+u(2784)
+u(2800)
+u(2872)
+u(2856)
+f(1612,1,1)
+u(1604)
+u(1476)
+u(876)
+u(868)
+u(860)
+u(852)
+u(852)
+u(852)
+u(852)
+u(1356)
+u(1364)
+u(220)
+u(212)
+u(204)
+u(76)
+u(236)
+u(228)
+u(940)
+u(1492)
+u(3092)
+u(1723)
+u(3099)
+f(1651,1,1,37)
+u(1212,7)
+u(1548)
+u(2553)
+u(2466,3,2,0,1)
+u(2378,3,2,0,1)
+u(2266,3,2,0,1)
+u(2262,3,0,2,1)
+u(2398,3,0,2,1)
+u(2334,3,0,2,1)
+u(2360,3,0,1,2)
+u(2368)
+u(2336)
+u(1984)
+f(2472,5,3,4)
+u(2400)
+u(2312)
+u(2232)
+u(2848)
+u(2792)
+u(2792)
+u(2784)
+u(2800)
+u(2872)
+u(2856)
+f(2948,2,4,30)
+u(1132)
+u(708,3)
+u(700)
+u(268)
+u(1492)
+u(3092)
+u(1723)
+u(3099)
+f(1484,4,3,25)
+u(572)
+u(564)
+u(508)
+u(500)
+u(724)
+u(1492)
+u(3092)
+u(1723)
+u(3099)
+f(1580,4,25,1)
+u(1572)
+u(1492)
+u(3092)
+u(1723)
+u(3099)
+f(1628,4,1)
+u(1620)
+u(1492)
+u(3092)
+u(1723)
+u(3099)
+f(1659,1,1)
+u(1715)
+u(1484)
+u(572)
+u(564)
+u(508)
+u(500)
+u(724)
+u(1492)
+u(3092)
+u(1723)
+u(3099)
+f(1667,1,1,5)
+u(1707)
+u(1148)
+u(348,1)
+u(556)
+u(588)
+u(596)
+u(604)
+u(564)
+u(508)
+u(500)
+u(724)
+u(1492)
+u(3092)
+u(1723)
+u(3099)
+f(1484,4,1,4)
+u(572)
+u(564)
+u(508)
+u(500)
+u(724)
+u(1492)
+u(3092)
+u(1723)
+u(3099)
+f(1675,1,4,1)
+u(1739)
+u(3131)
+u(2972)
+u(2619)
+u(332)
+u(324)
+u(244)
+u(236)
+u(228)
+u(940)
+u(1492)
+u(3092)
+u(1723)
+u(3099)
+f(1691,1,1,2)
+u(1100)
+u(1092)
+u(132)
+u(884,1)
+u(1436)
+u(2635)
+u(2150,1,0,1,0)
+u(2142,1,0,1,0)
+u(2848)
+u(2792)
+u(2792)
+u(2784)
+u(2800)
+u(2872)
+u(2856)
+f(1196,5,1)
+u(1683)
+u(2698)
+u(2729)
+u(2760)
+u(2758,1,0,1,0)
+u(2574,1,0,1,0)
+u(2566,1,0,1,0)
+u(1998,1,0,1,0)
+u(2816)
+u(2816)
+u(2286,1,0,1,0)
+u(2248)
+u(2286,1,0,1,0)
+u(2368)
+u(2336)
+u(1984)
+f(1699,1,1)
+u(2980)
+u(716)
+u(140)
+u(524)
+u(420)
+u(412)
+u(1588)
+u(1596)
+u(1556)
+u(1564)
+u(1572)
+u(1492)
+u(3092)
+u(1723)
+u(3099)
+f(1731,1,1,2)
+u(1076,1)
+u(1060)
+u(196)
+u(204)
+u(76)
+u(236)
+u(228)
+u(940)
+u(1492)
+u(3092)
+u(1723)
+u(3099)
+f(1772,2,1)
+u(1788)
+u(1796)
+u(1756)
+u(1748)
+u(740)
+u(756)
+u(748)
+u(772)
+u(764)
+u(740)
+u(756)
+u(748)
+u(772)
+u(764)
+u(740)
+u(756)
+u(748)
+u(732)
+u(844)
+u(828)
+u(156)
+u(164)
+u(172)
+u(148)
+u(252)
+u(236)
+u(228)
+u(940)
+u(1492)
+u(3092)
+u(1723)
+u(3099)
+f(1830,1,1,1,0,1,0)
+u(1838,1,0,1,0)
+u(1854,1,0,1,0)
+u(1862,1,0,1,0)
+u(1950,1,0,1,0)
+u(1942,1,0,1,0)
+u(1934,1,0,1,0)
+u(1862,1,0,1,0)
+u(1950,1,0,1,0)
+u(1942,1,0,1,0)
+u(1934,1,0,1,0)
+u(1880)
+u(1934,1,0,1,0)
+u(1862,1,0,1,0)
+u(1950,1,0,1,0)
+u(1942,1,0,1,0)
+u(1934,1,0,1,0)
+u(1920)
+u(2920)
+u(2912)
+u(2904)
+u(2608)
+u(2792)
+u(2792)
+u(2784)
+u(2800)
+u(2872)
+u(2856)
+f(1854,1,1,1,0,1,0)
+u(1862,1,0,1,0)
+u(1864)
+u(2168)
+u(2584)
+u(2576)
+u(2566,1,0,1,0)
+u(1998,1,0,1,0)
+u(1952)
+u(1946)
+u(1938)
+u(1929)
+u(1858)
+u(1946)
+u(1938)
+u(1929)
+u(1886,1,0,1,0)
+u(1929)
+u(1858)
+u(1946)
+u(1938)
+u(1929)
+u(1926,1,0,1,0)
+u(2926,1,0,1,0)
+u(2918,1,0,1,0)
+u(2906)
+u(2614,1,0,1,0)
+u(2792)
+u(2792)
+u(2784)
+u(2800)
+u(2872)
+u(2856)
+f(1886,1,1,1,0,1,0)
+u(1929)
+u(1858)
+u(1946)
+u(1938)
+u(1929)
+u(1926,1,0,1,0)
+u(2926,1,0,1,0)
+u(2912)
+u(2904)
+u(2600)
+u(2792)
+u(2792)
+u(2784)
+u(2800)
+u(2872)
+u(2856)
+f(1894,1,1,1,0,1,0)
+u(1960)
+u(1904)
+u(1912)
+u(1902,1,0,1,0)
+u(1942,1,0,1,0)
+u(1934,1,0,1,0)
+u(1926,1,0,1,0)
+u(2920)
+u(2912)
+u(2904)
+u(2608)
+u(2792)
+u(2792)
+u(2784)
+u(2800)
+u(2872)
+u(2856)
+f(1969,1,1)
+u(1960)
+u(1904)
+u(1912)
+u(1902,1,0,1,0)
+u(1942,1,0,1,0)
+u(1934,1,0,1,0)
+u(1926,1,0,1,0)
+u(2926,1,0,1,0)
+u(2912)
+u(2904)
+u(2608)
+u(2792)
+u(2792)
+u(2784)
+u(2800)
+u(2872)
+u(2856)
+f(2010,1,1,13)
+u(2042)
+u(2082)
+u(2114)
+u(2090)
+u(2689)
+u(2714)
+u(2729)
+u(2760)
+u(2752,13,0,4,9)
+u(2574,13,0,7,6)
+u(2566,13,0,9,4)
+u(1998,13,0,9,4)
+u(2816)
+u(2816)
+u(2286,13,0,10,3)
+u(2248)
+u(2286,13,0,10,3)
+u(2368)
+u(2336)
+u(1984)
+f(2018,1,13,7)
+u(2090)
+u(2689)
+u(2714)
+u(2729)
+u(2760)
+u(2752,7,0,2,5)
+u(2568,7,0,3,4)
+u(2566,7,0,5,2)
+u(1998,7,0,5,2)
+u(2816)
+u(2816)
+u(2286,7,0,6,1)
+u(2248)
+u(2286,7,0,6,1)
+u(2368)
+u(2336)
+u(1984)
+f(2026,1,7,8)
+u(2050)
+u(2050)
+u(2010)
+u(2042)
+u(2082)
+u(2074,2)
+u(2714)
+u(2729)
+u(2760)
+u(2758,2,0,2,0)
+u(2574,2,0,2,0)
+u(2566,2,0,2,0)
+u(1998,2,0,2,0)
+u(2816)
+u(2816)
+u(2286,2,0,2,0)
+u(2248)
+u(2286,2,0,2,0)
+u(2368)
+u(2336)
+u(1984)
+f(2114,7,2,6)
+u(2090)
+u(2689)
+u(2714)
+u(2729)
+u(2760)
+u(2758,6,0,5,1)
+u(2574,6,0,5,1)
+u(2566,6,0,5,1)
+u(1998,6,0,5,1)
+u(2816)
+u(2816)
+u(2286,6,0,5,1)
+u(2248)
+u(2286,6,0,5,1)
+u(2368)
+u(2336)
+u(1984)
+f(2034,1,6,12)
+u(2058)
+u(2058)
+u(2010)
+u(2042)
+u(2082)
+u(2114)
+u(2090)
+u(2689)
+u(2714)
+u(2729)
+u(2760)
+u(2758,12,0,6,6)
+u(2574,12,0,9,3)
+u(2566,12,0,9,3)
+u(1998,12,0,9,3)
+u(2816)
+u(2816)
+u(2286,12,0,9,3)
+u(2248)
+u(2286,12,0,9,3)
+u(2368)
+u(2336)
+u(1984)
+f(2042,1,12,13)
+u(2082)
+u(2074,7)
+u(2074,6)
+u(2682)
+u(2714)
+u(2729)
+u(2760)
+u(2752,6,0,1,5)
+u(2568,6,0,2,4)
+u(2566,6,0,5,1)
+u(1998,6,0,5,1)
+u(2816)
+u(2816)
+u(2286,6,0,5,1)
+u(2248)
+u(2286,6,0,5,1)
+u(2368)
+u(2336)
+u(1984)
+f(2714,4,6,1)
+u(2729)
+u(2760)
+u(2758,1,0,1,0)
+u(2574,1,0,1,0)
+u(2566,1,0,1,0)
+u(1998,1,0,1,0)
+u(2816)
+u(2816)
+u(2286,1,0,1,0)
+u(2248)
+u(2286,1,0,1,0)
+u(2368)
+u(2336)
+u(1984)
+f(2114,3,1,6)
+u(2090)
+u(2689)
+u(2714)
+u(2729)
+u(2760)
+u(2758,6,0,3,3)
+u(2574,6,0,5,1)
+u(2566,6,0,6,0)
+u(1998,6,0,6,0)
+u(2816)
+u(2816)
+u(2286,6,0,6,0)
+u(2248)
+u(2286,6,0,6,0)
+u(2368)
+u(2336)
+u(1984)
+f(2070,1,6,1,0,1,0)
+u(3056)
+u(3054,1,0,1,0)
+u(3070,1,0,1,0)
+u(3038,1,0,1,0)
+u(2006,1,0,1,0)
+u(1818)
+u(1814,1,0,1,0)
+u(1842)
+u(1874)
+u(2926,1,0,1,0)
+u(2912)
+u(2904)
+u(2608)
+u(2792)
+u(2792)
+u(2784)
+u(2800)
+u(2872)
+u(2856)
+f(2074,1,1,18)
+u(2714)
+u(2729)
+u(2760)
+u(2758,18,0,12,6)
+u(2574,18,0,16,2)
+u(2566,18,0,18,0)
+u(1998,18,0,18,0)
+u(2816)
+u(2816)
+u(2286,18,0,18,0)
+u(2248)
+u(2286,18,0,18,0)
+u(2368)
+u(2336)
+u(1984)
+f(2090,1,18,6)
+u(2689)
+u(2714)
+u(2729)
+u(2760)
+u(2758,6,0,4,2)
+u(2574,6,0,4,2)
+u(2566,6,0,4,2)
+u(1998,6,0,4,2)
+u(2816)
+u(2816)
+u(2286,6,0,4,2)
+u(2248)
+u(2286,6,0,4,2)
+u(2368)
+u(2336)
+u(1984)
+f(2098,1,6,2)
+u(2689)
+u(2714)
+u(2729)
+u(2760)
+u(2752)
+u(2568)
+u(2560)
+u(1992)
+u(2816)
+u(2816)
+u(2280)
+u(2248)
+u(2280)
+u(2368)
+u(2336)
+u(1984)
+f(2106,1,2,1)
+u(2098)
+u(2689)
+u(2714)
+u(2729)
+u(2760)
+u(2752)
+u(2574,1,0,1,0)
+u(2566,1,0,1,0)
+u(1998,1,0,1,0)
+u(2816)
+u(2816)
+u(2286,1,0,1,0)
+u(2248)
+u(2286,1,0,1,0)
+u(2368)
+u(2336)
+u(1984)
+f(2128,1,1)
+u(2832)
+u(2808)
+u(2200)
+u(2198,1,0,1,0)
+u(2846,1,0,1,0)
+u(2830,1,0,1,0)
+u(2816)
+u(2816)
+u(2286,1,0,1,0)
+u(2248)
+u(2286,1,0,1,0)
+u(2368)
+u(2336)
+u(1984)
+f(2154,1,1,3)
+u(2682)
+u(2714)
+u(2729)
+u(2760)
+u(2752,3,0,1,2)
+u(2568,3,0,1,2)
+u(2566,3,0,2,1)
+u(1998,3,0,2,1)
+u(2816)
+u(2816)
+u(2286,3,0,3,0)
+u(2248)
+u(2286,3,0,3,0)
+u(2368)
+u(2336)
+u(1984)
+f(2184,1,3,1)
+u(2128)
+u(2832)
+u(2808)
+u(2200)
+u(2192)
+u(2840)
+u(2824)
+u(2816)
+u(2816)
+u(2280)
+u(2248)
+u(2280)
+u(2368)
+u(2336)
+u(1984)
+f(2224,1,1)
+u(2240)
+u(2848)
+u(2792)
+u(2792)
+u(2784)
+u(2800)
+u(2872)
+u(2856)
+f(2286,1,1,2,0,2,0)
+u(2368)
+u(2336)
+u(1984)
+f(2390,1,2,1,0,1,0)
+u(2264)
+u(2256)
+u(2392)
+u(2328)
+u(2360)
+u(2368)
+u(2336)
+u(1984)
+f(2398,1,1,2,0,2,0)
+u(2334,2,0,2,0)
+u(2360)
+u(2368)
+u(2336)
+u(1984)
+f(2400,1,2,1)
+u(2312)
+u(2234)
+u(2854,1,0,1,0)
+u(2792)
+u(2792)
+u(2784)
+u(2800)
+u(2872)
+u(2856)
+f(2434,1,1)
+u(2526,1,0,1,0)
+u(2312)
+u(2232)
+u(2848)
+u(2792)
+u(2792)
+u(2784)
+u(2800)
+u(2872)
+u(2856)
+f(2446,1,1,1,0,1,0)
+u(2344)
+u(2438,1,0,1,0)
+u(2352)
+u(2368)
+u(2336)
+u(1984)
+f(2454,1,1,1,0,1,0)
+u(2434)
+u(2522)
+u(2322)
+u(2310,1,0,1,0)
+u(2120)
+u(2208)
+u(2272)
+u(2290)
+u(2286,1,0,1,0)
+u(2368)
+u(2336)
+u(1984)
+f(2482,1,1)
+u(2454,1,0,1,0)
+u(2434)
+u(2522)
+u(2322)
+u(2310,1,0,1,0)
+u(2120)
+u(2214,1,0,1,0)
+u(2278,1,0,1,0)
+u(2290)
+u(2286,1,0,1,0)
+u(2368)
+u(2336)
+u(1984)
+f(2494,1,1,1,0,1,0)
+u(2506)
+u(2514)
+u(3070,1,0,1,0)
+u(3038,1,0,1,0)
+u(2006,1,0,1,0)
+u(1818)
+u(1814,1,0,1,0)
+u(1842)
+u(1874)
+u(2926,1,0,1,0)
+u(2918,1,0,1,0)
+u(2910,1,0,1,0)
+u(2608)
+u(2792)
+u(2792)
+u(2784)
+u(2800)
+u(2872)
+u(2856)
+f(2502,1,1,1,0,1,0)
+u(2422,1,0,1,0)
+u(2304)
+u(2120)
+u(2208)
+u(2272)
+u(2288)
+u(2280)
+u(2368)
+u(2336)
+u(1984)
+f(2506,1,1,2)
+u(2514)
+u(2206,1,0,1,0)
+u(2198,1,0,1,0)
+u(2846,1,0,1,0)
+u(2830,1,0,1,0)
+u(2816)
+u(2816)
+u(2286,1,0,1,0)
+u(2248)
+u(2286,1,0,1,0)
+u(2368)
+u(2336)
+u(1984)
+f(3070,3,1,1,0,1,0)
+u(3038,1,0,1,0)
+u(2006,1,0,1,0)
+u(1818)
+u(1814,1,0,1,0)
+u(1842)
+u(1878,1,0,1,0)
+u(2920)
+u(2928)
+u(2864)
+u(2792)
+u(2792)
+u(2784)
+u(2800)
+u(2872)
+u(2856)
+f(2531,1,1,10)
+u(2722)
+u(2706)
+u(2729)
+u(2760)
+u(2758,10,0,6,4)
+u(2574,10,0,6,4)
+u(2566,10,0,8,2)
+u(1998,10,0,8,2)
+u(2816)
+u(2816)
+u(2286,10,0,8,2)
+u(2248)
+u(2286,10,0,8,2)
+u(2368)
+u(2336)
+u(1984)
+f(2539,1,10,104)
+u(2722)
+u(2706)
+u(2729)
+u(2760)
+u(2758,104,0,52,52)
+u(2574,104,0,73,31)
+u(2566,104,0,84,20)
+u(1998,104,0,84,20)
+u(2816)
+u(2816)
+u(2286,104,0,88,16)
+u(2248)
+u(2286,104,0,88,16)
+u(2368)
+u(2336)
+u(1984)
+f(2566,1,104,1,0,1,0)
+u(1998,1,0,1,0)
+u(2816)
+u(2816)
+u(2286,1,0,1,0)
+u(2248)
+u(2286,1,0,1,0)
+u(2368)
+u(2336)
+u(1984)
+f(2627,1,1)
+u(1977)
+u(1992)
+u(2816)
+u(2816)
+u(2280)
+u(2248)
+u(2280)
+u(2368)
+u(2336)
+u(1984)
+f(2660,1,1,6)
+u(372)
+u(932)
+u(1204)
+u(1516)
+u(1508)
+u(684)
+u(676)
+u(516)
+u(500)
+u(724)
+u(1492)
+u(3092)
+u(1723)
+u(3099)
+f(2666,1,6,1)
+u(2706)
+u(2729)
+u(2760)
+u(2752)
+u(2574,1,0,1,0)
+u(2566,1,0,1,0)
+u(1998,1,0,1,0)
+u(2816)
+u(2816)
+u(2286,1,0,1,0)
+u(2248)
+u(2286,1,0,1,0)
+u(2368)
+u(2336)
+u(1984)
+f(2674,1,1,2)
+u(2698)
+u(2729)
+u(2760)
+u(2752)
+u(2574,2,0,1,1)
+u(2566,2,0,2,0)
+u(1998,2,0,2,0)
+u(2816)
+u(2816)
+u(2286,2,0,2,0)
+u(2248)
+u(2286,2,0,2,0)
+u(2368)
+u(2336)
+u(1984)
+f(2682,1,2,14)
+u(2714)
+u(2729)
+u(2760)
+u(2758,14,0,7,7)
+u(2574,14,0,11,3)
+u(2566,14,0,12,2)
+u(1998,14,0,12,2)
+u(2816)
+u(2816)
+u(2286,14,0,13,1)
+u(2248)
+u(2286,14,0,13,1)
+u(2368)
+u(2336)
+u(1984)
+f(2689,1,14,29)
+u(2714)
+u(2729)
+u(2760)
+u(2752,29,0,12,17)
+u(2574,29,0,17,12)
+u(2566,29,0,21,8)
+u(1998,29,0,21,8)
+u(2816)
+u(2816)
+u(2286,29,0,23,6)
+u(2248)
+u(2286,29,0,23,6)
+u(2368)
+u(2336)
+u(1984)
+f(2698,1,29,328)
+u(2729)
+u(2760)
+u(2758,328,0,168,160)
+u(2574,328,0,243,85)
+u(2566,328,0,272,56)
+u(1998,328,0,272,56)
+u(2816)
+u(2816)
+u(2286,328,0,281,47)
+u(2248)
+u(2286,328,0,281,47)
+u(2368)
+u(2336)
+u(1984)
+f(2714,1,328,3)
+u(2729)
+u(2760)
+u(2752)
+u(2568)
+u(2560)
+u(1992)
+u(2816)
+u(2816)
+u(2280,3,0,1,2)
+u(2248)
+u(2280,3,0,1,2)
+u(2368)
+u(2336)
+u(1984)
+f(2722,1,3,4)
+u(2706)
+u(2729)
+u(2760)
+u(2758,4,0,3,1)
+u(2574,4,0,3,1)
+u(2566,4,0,4,0)
+u(1998,4,0,4,0)
+u(2816)
+u(2816)
+u(2286,4,0,4,0)
+u(2248)
+u(2286,4,0,4,0)
+u(2368)
+u(2336)
+u(1984)
+f(2729,1,4,2)
+u(2760)
+u(2752)
+u(2574,2,0,2,0)
+u(2566,2,0,2,0)
+u(1998,2,0,2,0)
+u(2816)
+u(2816)
+u(2286,2,0,2,0)
+u(2248)
+u(2286,2,0,2,0)
+u(2368)
+u(2336)
+u(1984)
+f(2738,1,2,11)
+u(2682,1)
+u(2714)
+u(2729)
+u(2760)
+u(2758,1,0,1,0)
+u(2574,1,0,1,0)
+u(2566,1,0,1,0)
+u(1998,1,0,1,0)
+u(2816)
+u(2816)
+u(2286,1,0,1,0)
+u(2248)
+u(2286,1,0,1,0)
+u(2368)
+u(2336)
+u(1984)
+f(2722,2,1,10)
+u(2706)
+u(2729)
+u(2760)
+u(2758,10,0,6,4)
+u(2574,10,0,8,2)
+u(2566,10,0,10,0)
+u(1998,10,0,10,0)
+u(2816)
+u(2816)
+u(2286,10,0,10,0)
+u(2248)
+u(2286,10,0,10,0)
+u(2368)
+u(2336)
+u(1984)
+f(2750,1,10,1,0,1,0)
+u(2758,1,0,1,0)
+u(2574,1,0,1,0)
+u(2566,1,0,1,0)
+u(1998,1,0,1,0)
+u(2816)
+u(2816)
+u(2286,1,0,1,0)
+u(2248)
+u(2286,1,0,1,0)
+u(2368)
+u(2336)
+u(1984)
+f(2758,1,1,1,0,1,0)
+u(2574,1,0,1,0)
+u(2566,1,0,1,0)
+u(1998,1,0,1,0)
+u(2816)
+u(2816)
+u(2286,1,0,1,0)
+u(2248)
+u(2286,1,0,1,0)
+u(2368)
+u(2336)
+u(1984)
+f(2768,1,1)
+u(2776)
+u(2782,1,0,1,0)
+u(2758,1,0,1,0)
+u(2574,1,0,1,0)
+u(2566,1,0,1,0)
+u(1998,1,0,1,0)
+u(2816)
+u(2816)
+u(2286,1,0,1,0)
+u(2248)
+u(2286,1,0,1,0)
+u(2368)
+u(2336)
+u(1984)
+f(2854,1,1,2,0,2,0)
+u(2792)
+u(2792)
+u(2784)
+u(2800)
+u(2872)
+u(2856)
+f(2888,1,2,1)
+u(2896)
+u(2880)
+u(2848)
+u(2792)
+u(2792)
+u(2784)
+u(2800)
+u(2872)
+u(2856)
+f(2918,1,1,1,0,1,0)
+u(2910,1,0,1,0)
+u(2600)
+u(2792)
+u(2792)
+u(2784)
+u(2800)
+u(2872)
+u(2856)
+f(2936,1,1)
+u(2928)
+u(2864)
+u(2792)
+u(2792)
+u(2784)
+u(2800)
+u(2872)
+u(2856)
+f(2956,1,1)
+u(260)
+u(492)
+u(692)
+u(468)
+u(460)
+u(660)
+u(500)
+u(724)
+u(1492)
+u(3092)
+u(1723)
+u(3099)
+f(2987,1,1)
+u(3025)
+u(3046,1,0,1,0)
+u(3054,1,0,1,0)
+u(3070,1,0,1,0)
+u(3038,1,0,1,0)
+u(2006,1,0,1,0)
+u(1818)
+u(1814,1,0,1,0)
+u(1842)
+u(1874)
+u(2926,1,0,1,0)
+u(2918,1,0,1,0)
+u(2906)
+u(2606,1,0,1,0)
+u(2792)
+u(2792)
+u(2784)
+u(2800)
+u(2872)
+u(2856)
+f(2995,1,1)
+u(1636)
+u(436)
+u(420)
+u(412)
+u(1588)
+u(1596)
+u(1556)
+u(1564)
+u(1572)
+u(1492)
+u(3092)
+u(1723)
+u(3099)
+f(3003,1,1,10)
+u(724)
+u(1492)
+u(3092)
+u(1723)
+u(3099)
+f(3011,1,10,1)
+u(2964)
+u(1628)
+u(1620)
+u(1492)
+u(3092)
+u(1723)
+u(3099)
+f(3017,1,1)
+u(3078,1,0,1,0)
+u(3056)
+u(3054,1,0,1,0)
+u(3070,1,0,1,0)
+u(3038,1,0,1,0)
+u(2006,1,0,1,0)
+u(1818)
+u(1814,1,0,1,0)
+u(1842)
+u(1874)
+u(2926,1,0,1,0)
+u(2912)
+u(2904)
+u(2608)
+u(2792)
+u(2792)
+u(2784)
+u(2800)
+u(2872)
+u(2856)
+f(3083,1,1,7)
+u(1484)
+u(572)
+u(564)
+u(508)
+u(500)
+u(724)
+u(1492)
+u(3092)
+u(1723)
+u(3099)
+f(3108,1,7,1)
+u(3116)
+u(915)
+u(2593)
+u(1998,1,0,1,0)
+u(2816)
+u(2816)
+u(2286,1,0,1,0)
+u(2248)
+u(2286,1,0,1,0)
+u(2368)
+u(2336)
+u(1984)
+f(3124,1,1)
+u(364)
+u(2652)
+u(548)
+u(2660)
+u(372)
+u(380)
+u(692)
+u(468)
+u(460)
+u(660)
+u(500)
+u(724)
+u(1492)
+u(3092)
+u(1723)
+u(3099)
+f(3139,1,1,4)
+u(3017)
+u(3074)
+u(3062,4,0,4,0)
+u(3054,4,0,4,0)
+u(3070,4,0,4,0)
+u(3038,4,0,4,0)
+u(2006,4,0,4,0)
+u(1818)
+u(1814,4,0,4,0)
+u(1842)
+u(1874)
+u(2926,4,0,4,0)
+u(2918,4,0,3,1)
+u(2910,4,0,3,1)
+u(2608)
+u(2792)
+u(2792)
+u(2784)
+u(2800)
+u(2872)
+u(2856)
+
+search();
+</script></body></html>
