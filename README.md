@@ -1,6 +1,14 @@
-# Benchmarking Variants
+# Benchmarking Parquet Variants through Iceberg
 
-This project shows the results of benchmarking variants through iceberg+spark and in parquet itself.
+#### Steve Loughran,
+#### April 2026
+
+## Key Questions
+1. Are variants ready to use?
+2. If not, what is needed?
+
+
+This project shows the results of benchmarking variants through Iceberg+Spark and in the Parquet library alone.
 
 The benchmarks are implemented in two PRs
 
@@ -9,7 +17,7 @@ The benchmarks are implemented in two PRs
 | Iceberg | [15629](https://github.com/apache/iceberg/pull/15629)    | Core, Spark: Add JMH benchmarks for Variants |
 | Parquet | [3452](https://github.com/apache/parquet-java/pull/3452) | GH-3451. Add a JMH benchmark for variants    |
 
-## Report (Work in progress)
+## Report
 
 [Benchmarking Parquet Variants through Iceberg](benchmarking-variants.md)
 
@@ -18,7 +26,6 @@ The benchmarks are implemented in two PRs
 | Benchmark                                                              | Results                             | Source                                                                                                                                                                                  |
 |------------------------------------------------------------------------|-------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | [IcebergSourceVariantIOBenchmark](results/iceberg/index.html)          | Spark SQL Queries on Iceberg tables | [source](https://github.com/steveloughran/iceberg/blob/pr/benchmark-variant/spark/v4.1/spark/src/jmh/java/org/apache/iceberg/parquet/IcebergSourceVariantIOBenchmark.java) |
-| [VariantSerializationBenchmark](results/iceberg-variant-serialization) | Variant Serialization               | [source](https://github.com/steveloughran/iceberg/blob/pr/benchmark-variant/core/src/jmh/java/org/apache/iceberg/variants/VariantSerializationBenchmark.java)                           | 
 | [Parquet](results/parquet)                                             | Parquet Variant Benchmarks          | [source](https://github.com/steveloughran/parquet-mr/tree/pr/benchmark-variant/parquet-benchmarks/src/main/java/org/apache/parquet/variant)                                             | 
 
 ## Site Repository
