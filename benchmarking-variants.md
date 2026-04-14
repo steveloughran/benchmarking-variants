@@ -1,5 +1,8 @@
 # Benchmarking Parquet Variants through Iceberg
 
+#### Steve Loughran,
+#### April 2026
+
 ## Key Questions
 1. Are variants ready to use?
 2. If not, what is needed?
@@ -8,20 +11,20 @@
 
 1. They can be slow when filtering on a shedded field.
 2. Spark SQL queries do not show performance issues when projecting a field within a variant, shredded or not.
-3. The parquet-java library has some odd behaviour related to schema used.
-4. It also has some easy and tangible speedups when parsing unshredded strings,
-5. What is needed?
-   * Predicate pushdown all the way from Iceberg to the parquet reader
+3. The parquet-java library has some odd behaviour related to the schema used when reading a file.
+4. What is needed?
+   * Predicate pushdown all the way from Iceberg to the Parquet reader
    * The causes of the "unexpected outcomes" in the benchmarking experiments to be identified and addressed.
      This could include identifying flaws in the benchmarks: review of those PRs is needed to give convidence in their conclusions.
-   * A bit more profiling of the parquet benchmarking
-   * An iceberg benchmark run with all the pending PRs merged to see what difference that makes. 
+   * A bit more profiling of the Parquet benchmarking
+   * An Iceberg benchmark run with all the pending PRs merged to see what difference that makes. 
 
-At the time of the writing of the initial document (10-04-2026) the benchmark results imply that it is faster to perform filtering on variant data stored in Avro in Iceberg + Spark queries than it is on data stored in Parquet.
+At the time of the writing of the initial document (10-04-2026) the benchmark results imply that it is faster to perform filtering on variant data stored in Avro in Iceberg + Spark queries than it is on data stored in Parquet -and that shredded variants are worse.
+This should not be the case.
 
 ## Relevant Pull Requests
 
-This is a list of PRs by myself and Qiegang Long which should improve query/read time.
+This is a list of PRs by myself, Qiegang Long and others which should improve query/read time.
 Sorted numerically by project.
 
 | Project | PR                                                       | Title                                                                                  | Author         |
@@ -41,13 +44,13 @@ A full stack built with all PRs is expected to be faster, especially through fil
 Two core benchmark suites were written for Parquet And Spark, to measure:
 1. Time to construct variants through builders.
 2. Time to read data from a file containing shredded and unshredded variants.
-3. Impact of deeper nesting of structures
+3. Impact of deeper nesting of structures.
 
-In both iceberg and spark, Variant Builder performance appears to be functional with `O(depth + field-count)` scalability.
-Deeply nested structures are bit less efficient because the Java `HashMap` instances constructed at each level preallocate space for 16 entries.
+In both Iceberg and Spark, Variant Builder performance appears to be functional with `O(depth + field-count)` scalability.
+Deeply nested structures consume memory because the Java `HashMap` instances constructed at each level preallocate space for 16 entries.
 
 Because there are no suprises here, these results are not covered in this report.
-The results are available as [html](results/iceberg) and [JSON](json/).
+The results are available as [html](./results/iceberg) and [JSON](./json).
 
 What is signficant is that reading data from files, with a simple test structure, produced disappointing results.
 Not only are variants slow to process in queries, shredded variants are often even slower to process.
@@ -55,7 +58,7 @@ Not only are variants slow to process in queries, shredded variants are often ev
 ### File Schema
 
 Each Parquet record has a simple structure designed to:
-* Support queries against parquet or variant fields mapped to the same integer values.
+* Support queries against Parquet or variant fields mapped to the same integer values.
 * Contain some strings to be slightly more realistic of the declared uses of variants. 
 
 The variant doesn't include any nested values, floating point values, and is very small.
@@ -74,10 +77,12 @@ nested: variant
     .col4: string -> 20 values from category
 ```
 
-The `ID` Column is is a row counter. `Category` is calculated from the file number and ID, such that
-all rows in a file will be in the category range 0-9 or 10-19.
+The `id` Column is is a row counter. `category` is calculated from the file number and ID, such that
+all associated RowGroup in a file will either be in the range 0-9 or the range 10-19.
+RowGroup filtering based on statistics should rapidly identify which rows can be skipped.
+If file statistics were collected, entire files can be omitted from the filtering.
 
-Example: the iceberg row construction code, which uses iceberg structures and types:
+Here is the Iceberg row construction code, which uses Iceberg structures and types:
 
 ```java
 private void writeOneFile(DataWriter<Record> writer, VariantMetadata metadata, int fileNum)
@@ -127,11 +132,12 @@ message vschema {
   }
 }
 ```
+<!--
 *Note*: it's not clear whether the variant group should be declared as optional or not.
-The examples in [the parquet format specification](https://parquet.apache.org/docs/file-format/types/variantencoding/) use `optional`.
+The examples in [the Parquet format specification](https://parquet.apache.org/docs/file-format/types/variantencoding/) use `optional`.
 However, as these examples needed changes to actually work [GH-561](https://github.com/apache/parquet-format/pull/562): variant schema examples to use (VARIANT(1))), they can't be considered normative.
-
-When writing a shredded parquet file in the parquet benchmarks, the schema was expanded to declare that there was an optional group `typed_value`, inside which each shredded element was declared with full type information.
+-->
+When writing a shredded Parquet file in the Parquet benchmarks, the schema was expanded to declare that there was an optional group `typed_value`, inside which each shredded element was declared with full type information.
 
 ```parquet
 message vschema {
@@ -150,7 +156,7 @@ message vschema {
 }
 ```
 
-Manual verification that the files generated through iceberg were consistent with this schema was performed through he parquet cli `schema` command:
+Manual verification that the files generated through Iceberg were consistent with this schema was performed through the Parquet cli `schema` command:
 
 ```
 Properties:
@@ -187,7 +193,7 @@ message table {
 
 ## Methods
 
-All benchmarks were implemented as JMH benchmarks within the parquet and iceberg
+All benchmarks were implemented as JMH benchmarks within the Parquet and Iceberg
 source trees, in `parquet-benchmark` for Parquet and `core/src/jmh` and `spark/v4.1/spark` for Iceberg
 
 Before reaching conclusions about the performance of the libraries, it is worthwhile considering whether the
@@ -225,7 +231,7 @@ spark().sql("SELECT * FROM variant_table WHERE variant_get(nested, '$.varcategor
 spark().sql("SELECT id FROM variant_table WHERE variant_get(nested, '$.varcategory', 'int') = 5");
 ```
 
-The results did change after this, with a key difference being that time differences between projecting on a variant field and a parquet column were no longer observable/significant.
+The results did change after this, with a key difference being that time differences between projecting on a variant field and a Parquet column were no longer observable/significant.
 That is: the performance hit of a `variant_get()` call retrieving a column was actually the SQL rather than retrieval.
 
 ### Tests were conducted on an ARM-based laptop not an x86 system.
@@ -244,6 +250,8 @@ I've not made any attempt to address that here.
 A key discovery of that part of the experiment is how outdated the "large" sizes is as 2 CPUs and 16 GB RAM is not large any more --and that even M1 MBPs are fast in comparison for compilation: 30 minutes versus 15.
 
 Given the numbers are ratios are similar the use of an x86 EC2 VM wasn't necessary, though it does make the conclusions more defensible.
+It also makes it straightforward for anyone comparing their own runs of these benchmarks with
+and without code modifications: run them on an `r5a.large` instance with Ubuntu 24.0 and openjdk 17.
 
 ### The Variant Structure is Unrealistic
 
@@ -256,7 +264,7 @@ Meanwhile, it's something else to benchmark and tune in future work.
 ### File Sizes are Too Small
 
 Inevitably, as the benchmark is designed to be fast.
-But does that explain the mismatch between filter times when filtering on a variant field rather than a parquet column?
+But does that explain the mismatch between filter times when filtering on a variant field rather than a Parquet column?
 
 ### Single Host Queries
 
@@ -275,7 +283,7 @@ I've done by hand before.
 
 # Iceberg query benchmarks
 
-The iceberg query benchmarks generated the a test dataset as: Parquet Unshredded, Parquet Shredded and Avro.
+The Iceberg query benchmarks generated the a test dataset as: Parquet Unshredded, Parquet Shredded and Avro.
 Variants are stored in the Avro files using Iceberg's variant ser/deser code.
 
 
@@ -286,7 +294,7 @@ resulting into 1M records overall.
 * Compression was disabled.
 * Partitioning was not enabled.
 * In the absence of of [#14707 Vectorized read for variant](https://github.com/apache/iceberg/issues/14707) vectorization was disabled.    
-
+* The entire table was created in a single commit.
 
 ```java
 protected Table initTable() {
@@ -308,15 +316,15 @@ protected Table initTable() {
 
 ## Iceberg Benchmark Results
 
-| Benchmark                                                              | Results                             | Source                                                                                                                                                                                  |
-|------------------------------------------------------------------------|-------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [IcebergSourceVariantIOBenchmark](results/iceberg/index.html)          | Spark SQL Queries on Iceberg tables | [source](https://github.com/steveloughran/iceberg/blob/pr/benchmark-variant/spark/v4.1/spark/src/jmh/java/org/apache/iceberg/spark/source/parquet/IcebergSourceVariantIOBenchmark.java) |
+| Benchmark                                                       | Results                             | Source                                                                                                                                                                                  |
+|-----------------------------------------------------------------|-------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [IcebergSourceVariantIOBenchmark](./results/iceberg/index.html) | Spark SQL Queries on Iceberg tables | [source](https://github.com/steveloughran/iceberg/blob/pr/benchmark-variant/spark/v4.1/spark/src/jmh/java/org/apache/iceberg/spark/source/parquet/IcebergSourceVariantIOBenchmark.java) |
 
 
-In the [benchmark results](results/iceberg/index.html), Avro is the topmost file type of every benchmark,
+In the [benchmark results](./results/iceberg/index.html), Avro is the topmost file type of every benchmark,
 followed by unshredded Parquet, and finally shredded Parquet.
 
-![file types](images/iceberg-benchmark-file-types-wide.png)
+![file types](./images/iceberg-benchmark-file-types-wide.png)
 
 All simple projection operations take a similar amount of time when executed through the Spark SQL API.
 
@@ -325,21 +333,21 @@ SELECT category FROM variant_table
 SELECT variant_get(nested, '$.varcategory', 'int') FROM variant_table
 ```
 
-![projections](images/iceberg-variant-project.png)
+![projections](./images/iceberg-variant-project.png)
 
 What is very different is any filtering query with a variant in the `WHERE` clause, e.g.
 
 ```sql
-SELECT id WHERE variant_get(nested, '$.varcategory', 'int') = 5
+SELECT id FROM variant_table WHERE variant_get(nested, '$.varcategory', 'int') = 5
 ```
 
-This query takes a long longer to complete than the query against the equivalent parquet column:
+This query takes a lot longer to complete than the query against the equivalent Parquet column:
 
 ```sql
-SELECT id WHERE category = 5
+SELECT id FROM variant_table WHERE category = 5
 ```
 
-![filter](images/iceberg-filter-operations.png)
+![filter](./images/iceberg-filter-operations.png)
 
 The filtering was *worse* with shredded variants.
 This implies that whatever predicate-pushdown based filtering on variant fields there is, it isn't
@@ -348,15 +356,15 @@ looking at shredded field statistics.
 ## Parquet Benchmark Results
 
 
-| Benchmark                                                              | Results                             | Source                                                                                                                                                                                  |
-|------------------------------------------------------------------------|-------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [Parquet](results/parquet)                                             | Parquet Variant Benchmarks          | [source](https://github.com/steveloughran/parquet-mr/tree/pr/benchmark-variant/parquet-benchmarks/src/main/java/org/apache/parquet/variant)                                             | 
+| Benchmark                    | Results                    | Source                                                                                                                                      |
+|------------------------------|----------------------------|---------------------------------------------------------------------------------------------------------------------------------------------|
+| [Parquet](./results/parquet) | Parquet Variant Benchmarks | [source](https://github.com/steveloughran/parquet-mr/tree/pr/benchmark-variant/parquet-benchmarks/src/main/java/org/apache/parquet/variant) | 
 
 ### VariantBuilder Benchmark
 
-The parquet variant builder benchmarked probed for scale issues as variants grew wider or deeper.
+The Parquet variant builder benchmarked probed for scale issues as variants grew wider or deeper.
 
-![parquet variant builder](images/parquet-variant-builder.png)
+![parquet variant builder](./images/parquet-variant-builder.png)
 
 No particular issues were see *in this specific benchmark*, though changes to the builder have now been proposed.
 
@@ -364,7 +372,7 @@ No particular issues were see *in this specific benchmark*, though changes to th
 
 This benchmark was interesting.
 
-![parquet variant builder](images/parquet-variant-projection.png)
+![parquet variant builder](./images/parquet-variant-projection.png)
 
 The first benchmark, `readAllRecords` just reads all records and all colums, where the helper method `consumeField()` consumes a filed within the supplied variant.
 It should be the worst of the projection benchmarks, and it is, especially for shredded variants.
@@ -394,9 +402,9 @@ private void consumeField(Variant nested, String key, Consumer<Variant> consume)
 }
 ```
 
-The subsequent two benchmarks are unusual.
+The subsequent two benchmarks do produce unexpected results.
 
-To read only a subset of the data, a "lean" parquet schema was created.
+To read only a subset of the data, a "lean" Parquet schema was created.
 This declares that the `varcategory` field may be found as a shredded field.
 It does not contain any declaration about any variand fields whic are not needed.
 
@@ -490,14 +498,54 @@ class VariantStringConverter {
 
 The benchmark suite `VariantConverterBenchmark` compares the performance of these operations, and shows a consistent speedup.of the proposed `appendStringAsBinary()` operation compared to the current `appendStringAsString()` sequence.
 
-![variant converter bar chart](images/parquet-variant-converter.png)
+![variant converter bar chart](./images/parquet-variant-converter.png)
 
-This enhancement is in the PR; the new `appendAsString(Binary binary)` method is package-private so does not change
+This enhancement is in the Parquet PR; the new `appendAsString(Binary binary)` method is package-private so does not change
 the public API.
-Note that the benchmark graphs in this document are shown after this improvement has been applied.
+Note that the Parquet benchmark graphs in this document are shown _after this improvement has been applied_;
+the Iceberg ones are not.
 
-# Conclusions
+# Related work
 
-* Variant performance is inconsistent and unpredictable.
-* Understanding and addressing this is critical once automatic shedding is
-  added to Iceberg.
+What other *recent* work benchmarking variants has been peformed?
+
+In the Iceberg Summit 2026 talk "The Evolution of Semi-Structured Data: Moving from JSON Strings to Iceberg V3 Variants",
+Arun Shanmugam and Suthan Phillips reported a 10x speedup using VARIANT over JSON blobs,
+and 95% I/O reduction.
+This was on a dataset of 5M rows with 41 kb of JSON data nested in each row.
+This apparently JSON and VARIANT, not looking at the behavior of queries across the variant type itself.
+The two benchmarks may therefore not be inconsistent: variants may be faster than JSON, and
+use less IO -but are as performant as they could be?
+
+
+# Conclusions and Futher Work
+
+Variant performance appears inconsistent and currently unpredictable.
+The performance penalty of filtering on unshredded variant fields was predictable,
+given the need to read and parse the variant.
+However, the performance penalty of filtering on a shredded variant was entirely unexpected.
+Understanding and addressing the cause of this is critical once automatic shedding is added to Iceberg.
+
+## Further work?
+
+The benchmark PRs are in a state where they are ready for review and hopefully merged into
+the Parquet and Iceberg projects.
+
+There are other PRs related to variants awaiting review and merge in Spark and Iceberg.
+It would be good to compare the results of our benchmarks when executed on a stack
+with these PRs applied.
+The JMH JSON reports [are provided](./json) should assist with such comparisions.
+
+Then we have the [other variant functions in Spark SQL](https://apache.github.io/spark/api/sql/variant-functions/).
+Focusing only on operations on Parquet variants, rather than JSON strings, `is_variant_null()` and `variant_explode()` are the obvious choices.
+
+The performance of joins on the variant data should also be be measured.
+Then we have other operatons, with equality deletion being one of particular relevance.
+
+Alongside that: changes in the test data.
+The existing variant could be expanded to contain a nested variant, which could then also be used in queries and joins.
+More than that, we need to consider "what is realistic variant data?" and "what queries are likely?"
+Any suggestions there are welcome.
+
+
+
