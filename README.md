@@ -39,10 +39,11 @@ This should not be the case.
 
 ## Results
 
-| Benchmark                                                  | Results                             |
-|------------------------------------------------------------|-------------------------------------|
-| [Iceberg Variant Benchmarks](./results/iceberg/index.html) | Spark SQL Queries on Iceberg tables |
-| [Parquet](./results/parquet)                               | Parquet Variant Benchmarks          | 
+| Benchmark                                                   | Results                             |
+|-------------------------------------------------------------|-------------------------------------|
+| [Iceberg Variant Benchmarks](./results/iceberg/index.html)  | Spark SQL Queries on Iceberg tables |
+| [Parquet](./results/parquet)                                | Parquet Variant Benchmarks          | 
+| [Parquet Performance Graphs](./results/parquet-performance) | Parquet Performance Graphs          | 
 
 ## Site Repository
 

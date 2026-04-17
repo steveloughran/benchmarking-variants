@@ -12,14 +12,16 @@
 1. They can be slow when filtering on a field within a variant, shredded or not.
 2. Spark SQL queries do not show performance issues when projecting a field within a variant.
 3. The parquet-java library has some odd behaviour related to the schema used when reading a file.
-4. What is needed?
+4. Profiling has identified some easy gains in Parquet's variant code; there's active work addressing this.
+   Iceberg's implementation is ahead here. 
+5. What is needed?
    * Predicate pushdown all the way from Iceberg to the Parquet reader
    * The causes of the "unexpected outcomes" in the benchmarking experiments to be identified and addressed.
      This could include identifying flaws in the benchmarks: review of those PRs is needed to give convidence in their conclusions.
-   * A bit more profiling of the Parquet benchmarking
+   * The Parquet-java variant support to borrow more from Iceberg.
    * An Iceberg benchmark run with all the pending PRs merged to see what difference that makes. 
 
-At the time of the writing of the initial document (10-04-2026) the benchmark results imply that it is faster to perform filtering on variant data stored in Avro in Iceberg + Spark queries than it is on data stored in Parquet -and that shredded variants are worse.
+At the time of the writing of the initial document (10-04-2026) the benchmark results imply that it is faster to perform filtering on variant data stored in Avro in Iceberg + Spark queries than it is on data stored in Parquet -and that shredded variants are the worst.
 This should not be the case.
 
 ## Relevant Pull Requests
@@ -35,11 +37,41 @@ Sorted numerically by project.
 | Spark   | [54598](https://github.com/apache/spark/pull/54598)      | Enable Parquet rowgroup skipping for variant filters to improve query-time performance | Qiegang Long   |
 | Spark   | [54394](https://github.com/apache/spark/pull/54394)      | Support variant_get predicate for DSv2 filter pushdown                                 | Qiegang Long   |
 | Parquet | [3452](https://github.com/apache/parquet-java/pull/3452) | *GH-3451. Add a JMH benchmark for variants*                                            | Steve Loughran |
+| Parquet | [3481](https://github.com/apache/parquet-java/pull/3481) | *Optimizing Variant read path with lazy caching*                                       | Neelesh Salian |
 
 This document only covers benchmarks from the two issues marked in italics: one in Iceberg and one in Parquet-java. 
 A full stack built with all PRs is expected to be faster, especially through file pushdown and use of the vectorized reader.
 
-## Benchmark Design and Test Setup
+## Related Work
+
+[_Preliminary Notes on Open-Source Variant Performance_](https://qlong.github.io/posts/2026-03-30-variant-early-results/),
+Qiegang Long, March 2026.
+
+This compared shredded and unshredded variant performance with raw JSON, using spark and iceberg tables,
+using 4M rows of the real-world semi-structured GitHub Archive (GHA) dataset as test data.
+
+The fastest format for querying data was JSON in Spark tables; the worst a shredded variant in a Spark Native table.
+
+> As of March 2026, if you are expecting a massive, out-of-the-box performance leap by simply switching to Variant in open-source Spark 4, our preliminary results suggest the engine implementations and defaults might still need some time to mature.
+
+
+ _"The Evolution of Semi-Structured Data: Moving from JSON Strings to Iceberg V3 Variants"_, April 2026.
+Arun Shanmugam and Suthan Phillips here report a 10x speedup using VARIANT over JSON blobs,
+and 95% I/O reduction.
+
+![Variant: Performance/Storage Efficiency](./images/aws-variant-benchmark.jpg)
+
+This was on a dataset of 5M rows with 41 kb of JSON data nested in each row, processed through Amazon EMR.
+
+
+All experiments reported a saving in space, especially in shredded variants, where classic Parquet column compression
+strategies can be applied.
+The benchmarks in this document also saw significant space savings -they just aren't being reported as that's not
+the topic of the investigation.
+Ideally we would want parquet files containing shredded variants which are small in size *and fast to read*.
+This benchmark and Qiegang Long's work imply there is work to be done here.
+
+# Benchmark Design and Test Setup
 
 Two core benchmark suites were written for Parquet And Spark, to measure:
 1. Time to construct variants through builders.
@@ -79,8 +111,8 @@ nested: variant
 
 The `id` Column is is a row counter. `category` is calculated from the file number and ID, such that
 all associated RowGroup in a file will either be in the range 0-9 or the range 10-19.
-RowGroup filtering based on statistics should rapidly identify which rows can be skipped.
-If file statistics were collected, entire files can be omitted from the filtering.
+RowGroup filtering based on statistics should rapidly identify which rows can be skipped,
+If file statistics were collected, entire files could be omitted from the filtering.
 
 Here is the Iceberg row construction code, which uses Iceberg structures and types:
 
@@ -132,11 +164,7 @@ message vschema {
   }
 }
 ```
-<!--
-*Note*: it's not clear whether the variant group should be declared as optional or not.
-The examples in [the Parquet format specification](https://parquet.apache.org/docs/file-format/types/variantencoding/) use `optional`.
-However, as these examples needed changes to actually work [GH-561](https://github.com/apache/parquet-format/pull/562): variant schema examples to use (VARIANT(1))), they can't be considered normative.
--->
+
 When writing a shredded Parquet file in the Parquet benchmarks, the schema was expanded to declare that there was an optional group `typed_value`, inside which each shredded element was declared with full type information.
 
 ```parquet
@@ -382,6 +410,8 @@ suboptimal.
 
 ## Profile-driven Parquet Improvements
 
+The Parquet benchmarks were profiles, with the results converted to flame graphs: [profiles](./results/parquet-performance)
+
 Running the `VariantProjectionBenchmark` under a profiler highlighted that:
 1. `VariantConverters` took a lot of the CPU time.
 2. String unmarshalling took a large fraction of this and involved two stages of memory allocation and copy,
@@ -438,12 +468,11 @@ the public API.
 Note that the Parquet benchmark graphs in this document are shown _after this improvement has been applied_;
 the Iceberg ones are not.
 
-There's probably much more tuning awaiting discovery and implementation: the focus of the development will have been on correct functionality.
+There's much more tuning awaiting discovery and implementation: the focus of the development will have been on correct functionality.
 Looking at `VariantUtil` and the methods which appear in the flame graphs, `getMetadataMap()` seems worthy of attention.
 Given how so many variant types are stored as signed and unsigned int32 and int64 integers, optimised unmarshalling of these values rather than the generic `readUnsigned()`, `readLong()` -those methods in `org.apache.parquet.bytes.LittleEndianDataInputStream`
 could act as a reference (though as there is a TODO from at least 2013 about benchmarking there, better benchmarking may be broadly useful.
 Designing integer unmarshalling for modern vectorizable CPUs and with modern Java features would be a broadly useful exercise.
-
 
 # Criticisms
 
@@ -485,7 +514,7 @@ spark().sql("SELECT * FROM variant_table WHERE variant_get(nested, '$.varcategor
 spark().sql("SELECT id FROM variant_table WHERE variant_get(nested, '$.varcategory', 'int') = 5");
 ```
 
-The results did change after this, with a key difference being that time differences between projecting on a variant field and a Parquet column were no longer observable/significant.
+The results _did_ change after this, with a key difference being that time differences between projecting on a variant field and a Parquet column were no longer observable/significant.
 That is: the performance hit of a `variant_get()` call retrieving a column was actually the SQL rather than retrieval.
 
 ### Tests were conducted on an ARM-based laptop not an x86 system.
@@ -535,18 +564,6 @@ generated for the file and lean schemas into one class.
 I don't see any obvious inefficiences in the design, but it is not something
 I've done by hand before.
 
-# Related work
-
-What other *recent* work benchmarking variants has been peformed?
-
-In the Iceberg Summit 2026 talk _"The Evolution of Semi-Structured Data: Moving from JSON Strings to Iceberg V3 Variants",_
-Arun Shanmugam and Suthan Phillips reported a 10x speedup using VARIANT over JSON blobs,
-and 95% I/O reduction.
-This was on a dataset of 5M rows with 41 kb of JSON data nested in each row.
-This apparently JSON and VARIANT, not looking at the behavior of queries across the variant type itself.
-The two benchmarks may therefore not be inconsistent: variants may be faster than JSON, and
-use less IO -but are as performant as they could be?
-
 
 # Conclusions and Futher Work
 
@@ -595,3 +612,42 @@ Finally, we are left with the question _why is variant filtering so slow?_
 
 This document and associated PR doesn't attempt to answer that.
 What it does try to do is highlight how the benchmarks appear to identify significant performance issues here.
+
+# Appendix: Variant Metadata Caching in Parquet
+
+
+Since the initial publishing of this document, [Neelesh Salian](https://github.com/nssalian) has published a PR to improve metadata lookup by caching the keys: [Optimizing Variant read path with lazy caching
+](https://github.com/apache/parquet-java/pull/3481). 
+
+> Profiling in [3452](https://github.com/apache/parquet-java/pull/3452) identified `Variant.getFieldAtIndex()` and metadata string lookups as hotspots during variant reads.
+> Every call to `getFieldByKey`, `getFieldAtIndex`, and `getElementAtIndex` re-parses headers and re-allocates objects that could be cached.
+
+> Adds lazy caching to `Variant.java` for metadata strings, object headers, and array headers.
+> Field lookups in `getFieldByKey` now defer value construction until a match is found, and child Variants share the parent's metadata cache. Also removes two unused static helper methods.
+
+
+Before:
+```
+Benchmark                                   (depth)  (fieldCount)  Mode  Cnt      Score      Error  Units
+VariantBuilderBenchmark.deserializeVariant     Flat           200    ss    5  11248.133 ±  696.176  us/op
+VariantBuilderBenchmark.deserializeVariant   Nested           200    ss    5  15531.391 ± 1025.506  us/op
+```
+
+After:
+```
+Benchmark                                   (depth)  (fieldCount)  Mode  Cnt     Score      Error  Units
+VariantBuilderBenchmark.deserializeVariant     Flat           200    ss    5  4601.967 ± 4434.474  us/op
+VariantBuilderBenchmark.deserializeVariant   Nested           200    ss    5  7457.942 ± 3645.281  us/op
+```
+
+Most recent benchmarks after the thread safety changes
+
+```
+Benchmark                                   (depth)  (fieldCount)  Mode  Cnt     Score      Error  Units
+VariantBuilderBenchmark.deserializeVariant     Flat           200    ss    5  6142.534 ± 2839.243  us/op
+VariantBuilderBenchmark.deserializeVariant   Nested           200    ss    5  8013.900 ± 2725.291  us/op
+```
+----
+
+This PR cuts the deserialization time in half, which should be a tangible performance improvement.
+Hopefully it will be merged soon along with the #3452 benchmark caching.
