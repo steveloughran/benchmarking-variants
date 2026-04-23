@@ -24,12 +24,12 @@
 At the time of the writing of the initial document (10-04-2026) the benchmark results imply that it is faster to perform filtering on variant data stored in Avro in Iceberg + Spark queries than it is on data stored in Parquet -and that shredded variants are the worst.
 This should not be the case.
 
-## Relevant Pull Requests
+## Relevant Issues and Pull Requests
 
 This is a list of PRs by myself, Qiegang Long and others which should improve query/read time.
 Sorted numerically by project.
 
-| Project | PR                                                       | Title                                                                                  | Author         |
+| Project | Issue/PR                                                       | Title                                                                                  | Author         |
 |---------|----------------------------------------------------------|----------------------------------------------------------------------------------------|----------------|
 | Iceberg | [14707](https://github.com/apache/iceberg/issues/14707)  | Vectorized read for variant                                                            | enriquh        |
 | Iceberg | [15510](https://github.com/apache/iceberg/issues/15510)  | Parquet Rowgroup skipping for variant predicate                                        | Qiegang Long   |
