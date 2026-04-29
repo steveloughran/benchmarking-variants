@@ -15,7 +15,7 @@
 4. Profiling has identified some easy gains in Parquet's variant code; there's active work addressing this.
    Iceberg's implementation is ahead here. 
 5. What is needed?
-   * Predicate pushdown all the way from Iceberg to the Parquet reader
+   * Predicate pushdown all the way from Iceberg to the Parquet reader.
    * The causes of the "unexpected outcomes" in the benchmarking experiments to be identified and addressed.
      This could include identifying flaws in the benchmarks: review of those PRs is needed to give convidence in their conclusions.
    * The Parquet-java variant support to borrow more from Iceberg.
@@ -29,7 +29,7 @@ This should not be the case.
 This is a list of PRs by myself, Qiegang Long and others which should improve query/read time.
 Sorted numerically by project.
 
-| Project | Issue/PR                                                       | Title                                                                                  | Author         |
+| Project | Issue/PR                                                 | Title                                                                                  | Author         |
 |---------|----------------------------------------------------------|----------------------------------------------------------------------------------------|----------------|
 | Iceberg | [14707](https://github.com/apache/iceberg/issues/14707)  | Vectorized read for variant                                                            | enriquh        |
 | Iceberg | [15510](https://github.com/apache/iceberg/issues/15510)  | Parquet Rowgroup skipping for variant predicate                                        | Qiegang Long   |

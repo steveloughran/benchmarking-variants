@@ -1,10 +1,11 @@
-# Benchmarking Parquet Variants through Iceberg
+# Benchmarking Apache Parquet Variants through Apache Iceberg
 
 #### Steve Loughran,
 #### April 2026
 
 
-This project shows the results of benchmarking variants through Iceberg+Spark and in the Parquet library alone.
+This project shows the results of benchmarking Parquet's Variant type through Apache Iceberg and Spark,
+and in the Parquet library alone.
 
 The benchmarks are implemented in two PRs
 
@@ -47,9 +48,16 @@ This should not be the case.
 
 ## Site Repository
 
-This site is automatically regenerated when data is published to its github repository 
-[benchmarking-variants](https://github.com/steveloughran/benchmarking-variants)
+This site is automatically regenerated when data is published to its GitHub repository 
+[benchmarking-variants](https://github.com/steveloughran/benchmarking-variants).
 
 ## Published Results
 
 The content is all published via GitHub Pages at [steveloughran.github.io/benchmarking-variants/](https://steveloughran.github.io/benchmarking-variants/)
+
+## Links
+
+* [Hardened JMH tabulator](https://github.com/steveloughran/jmh-tabulate) Fork of [JMH Tabulate](https://github.com/JohnTortugo/jmh-tabulate)
+  whose `hardened` branch fixes the chart.js branch cryptographically and adds a `run-secure.sh` shell script which runs the report generator
+  in a macos sandbox with restricted file and network access.
+  Use this to compare 
