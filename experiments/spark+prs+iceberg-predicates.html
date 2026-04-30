@@ -1,0 +1,1917 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JMH Benchmark Comparison Report</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1" integrity="sha384-jb8JQMbMoBUzgWatfe6COACi2ljcDdZQ2OxczGA3bGNeWe+6DChMTBJemed7ZnvJ" crossorigin="anonymous"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .summary {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 30px;
+            border-left: 4px solid #007bff;
+        }
+        
+        .summary h2 {
+            margin-top: 0;
+            color: #007bff;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-card {
+            background-color: white;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #e9ecef;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+        }
+        
+        .stat-label {
+            font-size: 14px;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+        
+        .controls {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+        }
+        
+        .controls input, .controls select {
+            margin: 5px;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .controls button {
+            padding: 8px 16px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        
+        .controls button:hover {
+            background-color: #0056b3;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            cursor: pointer;
+            user-select: none;
+            position: relative;
+            text-align: center;
+        }
+        
+        th:hover {
+            background-color: #e9ecef;
+        }
+        
+        th.sorted-asc::after {
+            content: ' ↑';
+            position: absolute;
+            right: 8px;
+        }
+        
+        th.sorted-desc::after {
+            content: ' ↓';
+            position: absolute;
+            right: 8px;
+        }
+        
+        tr:hover {
+            background-color: #f8f9fa;
+        }
+        
+        tbody tr {
+            cursor: pointer;
+        }
+        
+        tbody tr:hover {
+            background-color: #e3f2fd;
+        }
+        
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+        }
+        
+        .modal-content {
+            background-color: #fefefe;
+            margin: 2% auto;
+            padding: 20px;
+            border: none;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 1200px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #007bff;
+        }
+        
+        .modal-title {
+            color: #333;
+            margin: 0;
+            font-size: 24px;
+        }
+        
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+        
+        .close:hover,
+        .close:focus {
+            color: #000;
+            text-decoration: none;
+        }
+        
+        .detail-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .detail-section {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #007bff;
+        }
+        
+        .detail-section h3 {
+            color: #007bff;
+            margin-top: 0;
+            margin-bottom: 15px;
+        }
+        
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            padding: 5px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .detail-label {
+            font-weight: bold;
+            color: #495057;
+        }
+        
+        .detail-value {
+            color: #6c757d;
+            font-family: monospace;
+        }
+        
+        .comparison-section {
+            background-color: #fff3cd;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #ffc107;
+            margin-bottom: 20px;
+        }
+        
+        .comparison-section h3 {
+            color: #856404;
+            margin-top: 0;
+        }
+        
+        .metric-comparison {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 20px;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .metric-box {
+            text-align: center;
+            padding: 15px;
+            border-radius: 8px;
+            background-color: white;
+            border: 1px solid #dee2e6;
+        }
+        
+        .metric-arrow {
+            font-size: 24px;
+            color: #6c757d;
+        }
+        
+        .metric-value {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .metric-error {
+            font-size: 14px;
+            color: #6c757d;
+        }
+        
+        .metric-label {
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+        
+        .secondary-metrics {
+            background-color: #e7f3ff;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #17a2b8;
+        }
+        
+        .secondary-metrics h4 {
+            color: #0c5460;
+            margin-top: 0;
+        }
+        
+        .jvm-args {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            word-break: break-all;
+            max-height: 100px;
+            overflow-y: auto;
+        }
+        
+        .significance-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .significance-yes {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        
+        .significance-no {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        
+        .status-improved {
+            color: #28a745;
+            font-weight: bold;
+        }
+        
+        .status-regressed {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        
+        .status-unchanged {
+            color: #6c757d;
+        }
+        
+        .number {
+            text-align: right;
+        }
+        
+        .filtered-stats {
+            background-color: #e7f3ff;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        
+        .benchmark-name {
+            font-family: monospace;
+            font-size: 12px;
+            max-width: 300px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div style="text-align: center; margin-bottom: 30px;">
+            
+            <h1 style="margin: 0; display: inline-block; vertical-align: middle;">JMH Benchmark Comparison Report</h1>
+            
+        </div>
+        <p style="text-align: center; color: #6c757d;">Generated on 2026-04-30 20:35:19</p>
+        
+        
+        
+        <div class="summary">
+            <h2 id="summaryTitle">Summary Statistics</h2>
+            <div class="stats-grid" id="summaryStats">
+                <div class="stat-card">
+                    <div class="stat-value">45</div>
+                    <div class="stat-label">Total Benchmarks</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">19</div>
+                    <div class="stat-label">Improved</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">26</div>
+                    <div class="stat-label">Regressed</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">1.02x</div>
+                    <div class="stat-label">Avg Speedup</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <h3>Filters and Controls</h3>
+            <input type="text" id="benchmarkFilter" placeholder="Filter by benchmark name..." onkeyup="filterTable()">
+            <select id="statusFilter" onchange="filterTable()">
+                <option value="">All Status</option>
+                <option value="improved">Improved</option>
+                <option value="regressed">Regressed</option>
+                <option value="unchanged">Unchanged</option>
+            </select>
+            <select id="modeFilter" onchange="filterTable()">
+                <option value="">All Modes</option>
+                <option value="thrpt">Throughput</option>
+                <option value="avgt">Average Time</option>
+                <option value="sample">Sample Time</option>
+                <option value="ss">Single Shot</option>
+            </select>
+            <select id="significanceFilter" onchange="filterTable()">
+                <option value="">All Significance</option>
+                <option value="significant">Statistically Significant</option>
+                <option value="not_significant">Not Significant</option>
+                <option value="insufficient_data">Insufficient Data (?)</option>
+            </select>
+            <button onclick="resetFilters()">Reset Filters</button>
+            <button onclick="exportFilteredData()">Export Filtered Data</button>
+            <button onclick="showBarChart()">Show Bar Chart</button>
+            
+            <div class="filtered-stats" id="filteredStats"></div>
+        </div>
+        
+        <table id="benchmarkTable">
+            <thead>
+                <tr>
+                    <th onclick="sortTable(0)" title="Benchmark Name">Benchmark</th>
+                    <th onclick="sortTable(1)" title="Baseline Score with Error">Baseline</th>
+                    <th onclick="sortTable(2)" title="Treatment Score with Error">Treatment</th>
+                    <th onclick="sortTable(3)" title="JMH Mode">Mode</th>
+                    <th onclick="sortTable(4)" title="Measurement Unit">Unit</th>
+                    <th onclick="sortTable(5)" title="Benchmark Parameters">Params</th>
+                    <th onclick="sortTable(6)" title="Performance Speedup Factor">Speedup</th>
+                    <th onclick="sortTable(7)" title="Statistical Significance">SS</th>
+                </tr>
+            </thead>
+            <tbody id="benchmarkTableBody">
+
+                <tr>
+                    <td class="benchmark-name" title="org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.filterCatProjectVarID">filterCatProjectVarID</td>
+                    <td class="number">446.1723 ± 719.1459</td>
+                    <td class="number">425.5545 ± 777.4304</td>
+                    <td style="text-align: center;">ss</td>
+                    <td style="text-align: center;">ms/op</td>
+                    <td style="text-align: center; font-size: 11px;" title="tableType=Shredded">Shredded</td>
+                    <td class="number status-improved" style="text-align: center;">1.05x</td>
+                    <td style="text-align: center;">No</td>
+                </tr>
+
+                <tr>
+                    <td class="benchmark-name" title="org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.filterCatProjectVarID">filterCatProjectVarID</td>
+                    <td class="number">668.5138 ± 138.5661</td>
+                    <td class="number">697.0871 ± 326.7494</td>
+                    <td style="text-align: center;">ss</td>
+                    <td style="text-align: center;">ms/op</td>
+                    <td style="text-align: center; font-size: 11px;" title="tableType=Avro">Avro</td>
+                    <td class="number status-regressed" style="text-align: center;">0.96x</td>
+                    <td style="text-align: center;">No</td>
+                </tr>
+
+                <tr>
+                    <td class="benchmark-name" title="org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.projectID">projectID</td>
+                    <td class="number">440.6655 ± 1462.9853</td>
+                    <td class="number">221.7167 ± 148.3912</td>
+                    <td style="text-align: center;">ss</td>
+                    <td style="text-align: center;">ms/op</td>
+                    <td style="text-align: center; font-size: 11px;" title="tableType=Avro">Avro</td>
+                    <td class="number status-improved" style="text-align: center;">1.99x</td>
+                    <td style="text-align: center;">No</td>
+                </tr>
+
+                <tr>
+                    <td class="benchmark-name" title="org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.filterVarcatProjectVarID">filterVarcatProjectVarID</td>
+                    <td class="number">1209.2488 ± 690.0975</td>
+                    <td class="number">1211.5911 ± 1149.3515</td>
+                    <td style="text-align: center;">ss</td>
+                    <td style="text-align: center;">ms/op</td>
+                    <td style="text-align: center; font-size: 11px;" title="tableType=Avro">Avro</td>
+                    <td class="number status-regressed" style="text-align: center;">1.00x</td>
+                    <td style="text-align: center;">No</td>
+                </tr>
+
+                <tr>
+                    <td class="benchmark-name" title="org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.filterVarcatProjectID">filterVarcatProjectID</td>
+                    <td class="number">1163.0826 ± 981.9654</td>
+                    <td class="number">1237.9336 ± 871.3128</td>
+                    <td style="text-align: center;">ss</td>
+                    <td style="text-align: center;">ms/op</td>
+                    <td style="text-align: center; font-size: 11px;" title="tableType=Avro">Avro</td>
+                    <td class="number status-regressed" style="text-align: center;">0.94x</td>
+                    <td style="text-align: center;">No</td>
+                </tr>
+
+                <tr>
+                    <td class="benchmark-name" title="org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.projectCat">projectCat</td>
+                    <td class="number">267.9502 ± 95.4190</td>
+                    <td class="number">277.9489 ± 531.7853</td>
+                    <td style="text-align: center;">ss</td>
+                    <td style="text-align: center;">ms/op</td>
+                    <td style="text-align: center; font-size: 11px;" title="tableType=Unshredded">Unshredded</td>
+                    <td class="number status-regressed" style="text-align: center;">0.96x</td>
+                    <td style="text-align: center;">No</td>
+                </tr>
+
+                <tr>
+                    <td class="benchmark-name" title="org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.filterVarcatProjectID">filterVarcatProjectID</td>
+                    <td class="number">1407.5138 ± 941.1133</td>
+                    <td class="number">1520.8694 ± 1044.3541</td>
+                    <td style="text-align: center;">ss</td>
+                    <td style="text-align: center;">ms/op</td>
+                    <td style="text-align: center; font-size: 11px;" title="tableType=Unshredded">Unshredded</td>
+                    <td class="number status-regressed" style="text-align: center;">0.93x</td>
+                    <td style="text-align: center;">No</td>
+                </tr>
+
+                <tr>
+                    <td class="benchmark-name" title="org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.projectVarCat">projectVarCat</td>
+                    <td class="number">316.5694 ± 984.2617</td>
+                    <td class="number">225.4091 ± 184.4719</td>
+                    <td style="text-align: center;">ss</td>
+                    <td style="text-align: center;">ms/op</td>
+                    <td style="text-align: center; font-size: 11px;" title="tableType=Shredded">Shredded</td>
+                    <td class="number status-improved" style="text-align: center;">1.40x</td>
+                    <td style="text-align: center;">No</td>
+                </tr>
+
+                <tr>
+                    <td class="benchmark-name" title="org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.explodeArraryColumns">explodeArraryColumns</td>
+                    <td class="number">907.4239 ± 560.7049</td>
+                    <td class="number">1024.9150 ± 795.7591</td>
+                    <td style="text-align: center;">ss</td>
+                    <td style="text-align: center;">ms/op</td>
+                    <td style="text-align: center; font-size: 11px;" title="tableType=Avro">Avro</td>
+                    <td class="number status-regressed" style="text-align: center;">0.89x</td>
+                    <td style="text-align: center;">No</td>
+                </tr>
+
+                <tr>
+                    <td class="benchmark-name" title="org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.filterCatProjectID">filterCatProjectID</td>
+                    <td class="number">336.4872 ± 142.7765</td>
+                    <td class="number">415.1269 ± 1033.3453</td>
+                    <td style="text-align: center;">ss</td>
+                    <td style="text-align: center;">ms/op</td>
+                    <td style="text-align: center; font-size: 11px;" title="tableType=Unshredded">Unshredded</td>
+                    <td class="number status-regressed" style="text-align: center;">0.81x</td>
+                    <td style="text-align: center;">No</td>
+                </tr>
+
+                <tr>
+                    <td class="benchmark-name" title="org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.filterArray0ProjectArray0">filterArray0ProjectArray0</td>
+                    <td class="number">983.1866 ± 302.8239</td>
+                    <td class="number">1070.1335 ± 775.9220</td>
+                    <td style="text-align: center;">ss</td>
+                    <td style="text-align: center;">ms/op</td>
+                    <td style="text-align: center; font-size: 11px;" title="tableType=Shredded">Shredded</td>
+                    <td class="number status-regressed" style="text-align: center;">0.92x</td>
+                    <td style="text-align: center;">No</td>
+                </tr>
+
+                <tr>
+                    <td class="benchmark-name" title="org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.filterArraryCategoryProjectID">filterArraryCategoryProjectID</td>
+                    <td class="number">913.5537 ± 546.9510</td>
+                    <td class="number">989.0182 ± 703.4969</td>
+                    <td style="text-align: center;">ss</td>
+                    <td style="text-align: center;">ms/op</td>
+                    <td style="text-align: center; font-size: 11px;" title="tableType=Shredded">Shredded</td>
+                    <td class="number status-regressed" style="text-align: center;">0.92x</td>
+                    <td style="text-align: center;">No</td>
+                </tr>
+
+                <tr>
+                    <td class="benchmark-name" title="org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.projectID">projectID</td>
+                    <td class="number">242.7523 ± 155.0618</td>
+                    <td class="number">212.6739 ± 164.5064</td>
+                    <td style="text-align: center;">ss</td>
+                    <td style="text-align: center;">ms/op</td>
+                    <td style="text-align: center; font-size: 11px;" title="tableType=Shredded">Shredded</td>
+                    <td class="number status-improved" style="text-align: center;">1.14x</td>
+                    <td style="text-align: center;">No</td>
+                </tr>
+
+                <tr>
+                    <td class="benchmark-name" title="org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.filterCat">filterCat</td>
+                    <td class="number">357.7879 ± 461.3311</td>
+                    <td class="number">422.6756 ± 794.8423</td>
+                    <td style="text-align: center;">ss</td>
+                    <td style="text-align: center;">ms/op</td>
+                    <td style="text-align: center; font-size: 11px;" title="tableType=Shredded">Shredded</td>
+                    <td class="number status-regressed" style="text-align: center;">0.85x</td>
+                    <td style="text-align: center;">No</td>
+                </tr>
+
+                <tr>
+                    <td class="benchmark-name" title="org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.filterVarcatProjectVarID">filterVarcatProjectVarID</td>
+                    <td class="number">2528.2548 ± 1507.3339</td>
+                    <td class="number">2448.5883 ± 1487.8416</td>
+                    <td style="text-align: center;">ss</td>
+                    <td style="text-align: center;">ms/op</td>
+                    <td style="text-align: center; font-size: 11px;" title="tableType=Shredded">Shredded</td>
+                    <td class="number status-improved" style="text-align: center;">1.03x</td>
+                    <td style="text-align: center;">No</td>
+                </tr>
+
+                <tr>
+                    <td class="benchmark-name" title="org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.filterArraryCategoryProjectID">filterArraryCategoryProjectID</td>
+                    <td class="number">946.7550 ± 368.2196</td>
+                    <td class="number">1052.1256 ± 939.7193</td>
+                    <td style="text-align: center;">ss</td>
+                    <td style="text-align: center;">ms/op</td>
+                    <td style="text-align: center; font-size: 11px;" title="tableType=Unshredded">Unshredded</td>
+                    <td class="number status-regressed" style="text-align: center;">0.90x</td>
+                    <td style="text-align: center;">No</td>
+                </tr>
+
+                <tr>
+                    <td class="benchmark-name" title="org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.projectArrayCategory">projectArrayCategory</td>
+                    <td class="number">439.3530 ± 1219.0926</td>
+                    <td class="number">390.5521 ± 894.2981</td>
+                    <td style="text-align: center;">ss</td>
+                    <td style="text-align: center;">ms/op</td>
+                    <td style="text-align: center; font-size: 11px;" title="tableType=Avro">Avro</td>
+                    <td class="number status-improved" style="text-align: center;">1.12x</td>
+                    <td style="text-align: center;">No</td>
+                </tr>
+
+                <tr>
+                    <td class="benchmark-name" title="org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.filterCat">filterCat</td>
+                    <td class="number">339.8762 ± 353.5854</td>
+                    <td class="number">449.3600 ± 938.0618</td>
+                    <td style="text-align: center;">ss</td>
+                    <td style="text-align: center;">ms/op</td>
+                    <td style="text-align: center; font-size: 11px;" title="tableType=Unshredded">Unshredded</td>
+                    <td class="number status-regressed" style="text-align: center;">0.76x</td>
+                    <td style="text-align: center;">No</td>
+                </tr>
+
+                <tr>
+                    <td class="benchmark-name" title="org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.filterVarcatProjectVarID">filterVarcatProjectVarID</td>
+                    <td class="number">1555.4538 ± 938.7871</td>
+                    <td class="number">1606.4883 ± 1178.5556</td>
+                    <td style="text-align: center;">ss</td>
+                    <td style="text-align: center;">ms/op</td>
+                    <td style="text-align: center; font-size: 11px;" title="tableType=Unshredded">Unshredded</td>
+                    <td class="number status-regressed" style="text-align: center;">0.97x</td>
+                    <td style="text-align: center;">No</td>
+                </tr>
+
+                <tr>
+                    <td class="benchmark-name" title="org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.filterVarCat">filterVarCat</td>
+                    <td class="number">2422.3683 ± 841.8141</td>
+                    <td class="number">2434.5306 ± 438.1157</td>
+                    <td style="text-align: center;">ss</td>
+                    <td style="text-align: center;">ms/op</td>
+                    <td style="text-align: center; font-size: 11px;" title="tableType=Shredded">Shredded</td>
+                    <td class="number status-regressed" style="text-align: center;">1.00x</td>
+                    <td style="text-align: center;">No</td>
+                </tr>
+
+                <tr>
+                    <td class="benchmark-name" title="org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.explodeArraryColumns">explodeArraryColumns</td>
+                    <td class="number">857.9745 ± 787.1429</td>
+                    <td class="number">1090.8854 ± 3341.3000</td>
+                    <td style="text-align: center;">ss</td>
+                    <td style="text-align: center;">ms/op</td>
+                    <td style="text-align: center; font-size: 11px;" title="tableType=Unshredded">Unshredded</td>
+                    <td class="number status-regressed" style="text-align: center;">0.79x</td>
+                    <td style="text-align: center;">No</td>
+                </tr>
+
+                <tr>
+                    <td class="benchmark-name" title="org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.projectVarID">projectVarID</td>
+                    <td class="number">261.4276 ± 247.9904</td>
+                    <td class="number">237.9659 ± 146.3099</td>
+                    <td style="text-align: center;">ss</td>
+                    <td style="text-align: center;">ms/op</td>
+                    <td style="text-align: center; font-size: 11px;" title="tableType=Shredded">Shredded</td>
+                    <td class="number status-improved" style="text-align: center;">1.10x</td>
+                    <td style="text-align: center;">No</td>
+                </tr>
+
+                <tr>
+                    <td class="benchmark-name" title="org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.filterArraryCategoryProjectID">filterArraryCategoryProjectID</td>
+                    <td class="number">1108.9108 ± 542.6810</td>
+                    <td class="number">1338.6459 ± 1375.4137</td>
+                    <td style="text-align: center;">ss</td>
+                    <td style="text-align: center;">ms/op</td>
+                    <td style="text-align: center; font-size: 11px;" title="tableType=Avro">Avro</td>
+                    <td class="number status-regressed" style="text-align: center;">0.83x</td>
+                    <td style="text-align: center;">No</td>
+                </tr>
+
+                <tr>
+                    <td class="benchmark-name" title="org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.filterVarCat">filterVarCat</td>
+                    <td class="number">1531.2510 ± 601.6042</td>
+                    <td class="number">1555.4557 ± 764.8576</td>
+                    <td style="text-align: center;">ss</td>
+                    <td style="text-align: center;">ms/op</td>
+                    <td style="text-align: center; font-size: 11px;" title="tableType=Unshredded">Unshredded</td>
+                    <td class="number status-regressed" style="text-align: center;">0.98x</td>
+                    <td style="text-align: center;">No</td>
+                </tr>
+
+                <tr>
+                    <td class="benchmark-name" title="org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.filterCat">filterCat</td>
+                    <td class="number">688.5089 ± 557.0074</td>
+                    <td class="number">860.6028 ± 661.3846</td>
+                    <td style="text-align: center;">ss</td>
+                    <td style="text-align: center;">ms/op</td>
+                    <td style="text-align: center; font-size: 11px;" title="tableType=Avro">Avro</td>
+                    <td class="number status-regressed" style="text-align: center;">0.80x</td>
+                    <td style="text-align: center;">No</td>
+                </tr>
+
+                <tr>
+                    <td class="benchmark-name" title="org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.filterCatProjectID">filterCatProjectID</td>
+                    <td class="number">664.5050 ± 234.6779</td>
+                    <td class="number">837.6240 ± 684.0426</td>
+                    <td style="text-align: center;">ss</td>
+                    <td style="text-align: center;">ms/op</td>
+                    <td style="text-align: center; font-size: 11px;" title="tableType=Avro">Avro</td>
+                    <td class="number status-regressed" style="text-align: center;">0.79x</td>
+                    <td style="text-align: center;">No</td>
+                </tr>
+
+                <tr>
+                    <td class="benchmark-name" title="org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.count">count</td>
+                    <td class="number">237.7207 ± 337.2219</td>
+                    <td class="number">884.6362 ± 4148.9218</td>
+                    <td style="text-align: center;">ss</td>
+                    <td style="text-align: center;">ms/op</td>
+                    <td style="text-align: center; font-size: 11px;" title="tableType=Unshredded">Unshredded</td>
+                    <td class="number status-regressed" style="text-align: center;">0.27x</td>
+                    <td style="text-align: center;">No</td>
+                </tr>
+
+                <tr>
+                    <td class="benchmark-name" title="org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.filterVarCat">filterVarCat</td>
+                    <td class="number">1253.2496 ± 859.1748</td>
+                    <td class="number">1298.8070 ± 1783.7832</td>
+                    <td style="text-align: center;">ss</td>
+                    <td style="text-align: center;">ms/op</td>
+                    <td style="text-align: center; font-size: 11px;" title="tableType=Avro">Avro</td>
+                    <td class="number status-regressed" style="text-align: center;">0.96x</td>
+                    <td style="text-align: center;">No</td>
+                </tr>
+
+                <tr>
+                    <td class="benchmark-name" title="org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.projectVarCat">projectVarCat</td>
+                    <td class="number">308.7752 ± 982.4622</td>
+                    <td class="number">372.7413 ± 740.0597</td>
+                    <td style="text-align: center;">ss</td>
+                    <td style="text-align: center;">ms/op</td>
+                    <td style="text-align: center; font-size: 11px;" title="tableType=Avro">Avro</td>
+                    <td class="number status-regressed" style="text-align: center;">0.83x</td>
+                    <td style="text-align: center;">No</td>
+                </tr>
+
+                <tr>
+                    <td class="benchmark-name" title="org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.filterCatProjectID">filterCatProjectID</td>
+                    <td class="number">373.0028 ± 526.8441</td>
+                    <td class="number">410.7545 ± 617.6245</td>
+                    <td style="text-align: center;">ss</td>
+                    <td style="text-align: center;">ms/op</td>
+                    <td style="text-align: center; font-size: 11px;" title="tableType=Shredded">Shredded</td>
+                    <td class="number status-regressed" style="text-align: center;">0.91x</td>
+                    <td style="text-align: center;">No</td>
+                </tr>
+
+                <tr>
+                    <td class="benchmark-name" title="org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.filterVarcatProjectID">filterVarcatProjectID</td>
+                    <td class="number">2432.3303 ± 1324.0507</td>
+                    <td class="number">2497.7679 ± 1811.3250</td>
+                    <td style="text-align: center;">ss</td>
+                    <td style="text-align: center;">ms/op</td>
+                    <td style="text-align: center; font-size: 11px;" title="tableType=Shredded">Shredded</td>
+                    <td class="number status-regressed" style="text-align: center;">0.97x</td>
+                    <td style="text-align: center;">No</td>
+                </tr>
+
+                <tr>
+                    <td class="benchmark-name" title="org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.explodeArraryColumns">explodeArraryColumns</td>
+                    <td class="number">1011.1572 ± 539.9970</td>
+                    <td class="number">836.7305 ± 468.2924</td>
+                    <td style="text-align: center;">ss</td>
+                    <td style="text-align: center;">ms/op</td>
+                    <td style="text-align: center; font-size: 11px;" title="tableType=Shredded">Shredded</td>
+                    <td class="number status-improved" style="text-align: center;">1.21x</td>
+                    <td style="text-align: center;">No</td>
+                </tr>
+
+                <tr>
+                    <td class="benchmark-name" title="org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.projectVarCat">projectVarCat</td>
+                    <td class="number">255.7028 ± 163.6873</td>
+                    <td class="number">230.8324 ± 302.6715</td>
+                    <td style="text-align: center;">ss</td>
+                    <td style="text-align: center;">ms/op</td>
+                    <td style="text-align: center; font-size: 11px;" title="tableType=Unshredded">Unshredded</td>
+                    <td class="number status-improved" style="text-align: center;">1.11x</td>
+                    <td style="text-align: center;">No</td>
+                </tr>
+
+                <tr>
+                    <td class="benchmark-name" title="org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.filterArray0ProjectArray0">filterArray0ProjectArray0</td>
+                    <td class="number">1173.6708 ± 1174.5412</td>
+                    <td class="number">1164.3321 ± 912.2366</td>
+                    <td style="text-align: center;">ss</td>
+                    <td style="text-align: center;">ms/op</td>
+                    <td style="text-align: center; font-size: 11px;" title="tableType=Avro">Avro</td>
+                    <td class="number status-improved" style="text-align: center;">1.01x</td>
+                    <td style="text-align: center;">No</td>
+                </tr>
+
+                <tr>
+                    <td class="benchmark-name" title="org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.projectArrayCategory">projectArrayCategory</td>
+                    <td class="number">285.0651 ± 236.7241</td>
+                    <td class="number">222.5026 ± 165.9006</td>
+                    <td style="text-align: center;">ss</td>
+                    <td style="text-align: center;">ms/op</td>
+                    <td style="text-align: center; font-size: 11px;" title="tableType=Shredded">Shredded</td>
+                    <td class="number status-improved" style="text-align: center;">1.28x</td>
+                    <td style="text-align: center;">No</td>
+                </tr>
+
+                <tr>
+                    <td class="benchmark-name" title="org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.projectArrayCategory">projectArrayCategory</td>
+                    <td class="number">298.6898 ± 332.8646</td>
+                    <td class="number">247.5867 ± 342.3309</td>
+                    <td style="text-align: center;">ss</td>
+                    <td style="text-align: center;">ms/op</td>
+                    <td style="text-align: center; font-size: 11px;" title="tableType=Unshredded">Unshredded</td>
+                    <td class="number status-improved" style="text-align: center;">1.21x</td>
+                    <td style="text-align: center;">No</td>
+                </tr>
+
+                <tr>
+                    <td class="benchmark-name" title="org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.projectID">projectID</td>
+                    <td class="number">262.1976 ± 483.1546</td>
+                    <td class="number">251.3570 ± 173.9727</td>
+                    <td style="text-align: center;">ss</td>
+                    <td style="text-align: center;">ms/op</td>
+                    <td style="text-align: center; font-size: 11px;" title="tableType=Unshredded">Unshredded</td>
+                    <td class="number status-improved" style="text-align: center;">1.04x</td>
+                    <td style="text-align: center;">No</td>
+                </tr>
+
+                <tr>
+                    <td class="benchmark-name" title="org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.projectCat">projectCat</td>
+                    <td class="number">259.7415 ± 114.6655</td>
+                    <td class="number">233.9334 ± 172.7624</td>
+                    <td style="text-align: center;">ss</td>
+                    <td style="text-align: center;">ms/op</td>
+                    <td style="text-align: center; font-size: 11px;" title="tableType=Shredded">Shredded</td>
+                    <td class="number status-improved" style="text-align: center;">1.11x</td>
+                    <td style="text-align: center;">No</td>
+                </tr>
+
+                <tr>
+                    <td class="benchmark-name" title="org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.filterArray0ProjectArray0">filterArray0ProjectArray0</td>
+                    <td class="number">951.1756 ± 406.5051</td>
+                    <td class="number">1264.4798 ± 2479.5095</td>
+                    <td style="text-align: center;">ss</td>
+                    <td style="text-align: center;">ms/op</td>
+                    <td style="text-align: center; font-size: 11px;" title="tableType=Unshredded">Unshredded</td>
+                    <td class="number status-regressed" style="text-align: center;">0.75x</td>
+                    <td style="text-align: center;">No</td>
+                </tr>
+
+                <tr>
+                    <td class="benchmark-name" title="org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.projectCat">projectCat</td>
+                    <td class="number">450.6786 ± 1541.0102</td>
+                    <td class="number">334.6850 ± 1183.1137</td>
+                    <td style="text-align: center;">ss</td>
+                    <td style="text-align: center;">ms/op</td>
+                    <td style="text-align: center; font-size: 11px;" title="tableType=Avro">Avro</td>
+                    <td class="number status-improved" style="text-align: center;">1.35x</td>
+                    <td style="text-align: center;">No</td>
+                </tr>
+
+                <tr>
+                    <td class="benchmark-name" title="org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.projectVarID">projectVarID</td>
+                    <td class="number">230.5648 ± 255.9760</td>
+                    <td class="number">226.6736 ± 195.0924</td>
+                    <td style="text-align: center;">ss</td>
+                    <td style="text-align: center;">ms/op</td>
+                    <td style="text-align: center; font-size: 11px;" title="tableType=Unshredded">Unshredded</td>
+                    <td class="number status-improved" style="text-align: center;">1.02x</td>
+                    <td style="text-align: center;">No</td>
+                </tr>
+
+                <tr>
+                    <td class="benchmark-name" title="org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.projectVarID">projectVarID</td>
+                    <td class="number">392.8790 ± 1100.7718</td>
+                    <td class="number">260.3376 ± 535.5366</td>
+                    <td style="text-align: center;">ss</td>
+                    <td style="text-align: center;">ms/op</td>
+                    <td style="text-align: center; font-size: 11px;" title="tableType=Avro">Avro</td>
+                    <td class="number status-improved" style="text-align: center;">1.51x</td>
+                    <td style="text-align: center;">No</td>
+                </tr>
+
+                <tr>
+                    <td class="benchmark-name" title="org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.count">count</td>
+                    <td class="number">412.1683 ± 475.9130</td>
+                    <td class="number">247.3912 ± 253.6962</td>
+                    <td style="text-align: center;">ss</td>
+                    <td style="text-align: center;">ms/op</td>
+                    <td style="text-align: center; font-size: 11px;" title="tableType=Avro">Avro</td>
+                    <td class="number status-improved" style="text-align: center;">1.67x</td>
+                    <td style="text-align: center;">No</td>
+                </tr>
+
+                <tr>
+                    <td class="benchmark-name" title="org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.filterCatProjectVarID">filterCatProjectVarID</td>
+                    <td class="number">422.0409 ± 1059.0283</td>
+                    <td class="number">418.6251 ± 975.5354</td>
+                    <td style="text-align: center;">ss</td>
+                    <td style="text-align: center;">ms/op</td>
+                    <td style="text-align: center; font-size: 11px;" title="tableType=Unshredded">Unshredded</td>
+                    <td class="number status-improved" style="text-align: center;">1.01x</td>
+                    <td style="text-align: center;">No</td>
+                </tr>
+
+                <tr>
+                    <td class="benchmark-name" title="org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.count">count</td>
+                    <td class="number">242.1409 ± 213.8759</td>
+                    <td class="number">290.5328 ± 227.2686</td>
+                    <td style="text-align: center;">ss</td>
+                    <td style="text-align: center;">ms/op</td>
+                    <td style="text-align: center; font-size: 11px;" title="tableType=Shredded">Shredded</td>
+                    <td class="number status-regressed" style="text-align: center;">0.83x</td>
+                    <td style="text-align: center;">No</td>
+                </tr>
+
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Detail Modal -->
+    <div id="detailModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modalTitle">Benchmark Details</h2>
+                <span class="close" onclick="closeModal()">&times;</span>
+            </div>
+            <div id="modalBody">
+                <!-- Content will be dynamically populated -->
+            </div>
+        </div>
+    </div>
+    
+    <!-- Experiment Details Modal -->
+    <div id="experimentModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">📋 Experiment Details</h2>
+                <span class="close" onclick="closeExperimentModal()">&times;</span>
+            </div>
+            <div id="experimentModalBody">
+                <!-- Content will be dynamically populated -->
+            </div>
+        </div>
+    </div>
+    
+    <!-- Chart Modal -->
+    <div id="chartModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Benchmark Speedup Chart</h2>
+                <span class="close" onclick="closeChartModal()">&times;</span>
+            </div>
+            <div style="height: 400px; position: relative;">
+                <canvas id="benchmarkChart"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let originalData = [{"benchmark": "org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.filterCatProjectVarID", "mode": "ss", "threads": 1, "baseline_score": 446.17232275000003, "baseline_error": 719.1458827685434, "treatment_score": 425.55446874999996, "treatment_error": 777.4304366981497, "unit": "ms/op", "improvement_percent": 4.621051766035408, "speedup": 1.0484493890066806, "status": "improved", "higher_is_better": false, "baseline_vm": "OpenJDK 64-Bit Server VM", "treatment_vm": "OpenJDK 64-Bit Server VM", "baseline_jdk": "", "treatment_jdk": "", "statistical_significance": {"is_significant": false, "confidence_level": "p \u2265 0.05", "t_statistic": 0.019468410000679864, "insufficient_data": false}, "baseline_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [-272.97356001854337, 1165.3182055185434], "secondary_metrics": {}, "params": {"tableType": "Shredded"}, "raw_data": [[402.103041, 402.509583, 611.402417, 368.67425]], "all_samples": [402.103041, 402.509583, 611.402417, 368.67425]}, "treatment_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [-351.87596794814976, 1202.9849054481497], "secondary_metrics": {}, "params": {"tableType": "Shredded"}, "raw_data": [[454.006917, 350.869416, 314.569917, 582.771625]], "all_samples": [454.006917, 350.869416, 314.569917, 582.771625]}, "display_name": "filterCatProjectVarID"}, {"benchmark": "org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.filterCatProjectVarID", "mode": "ss", "threads": 1, "baseline_score": 668.513823, "baseline_error": 138.56606784974255, "treatment_score": 697.0871355, "treatment_error": 326.74944209822985, "unit": "ms/op", "improvement_percent": -4.274154328144691, "speedup": 0.9590104148464808, "status": "regressed", "higher_is_better": false, "baseline_vm": "OpenJDK 64-Bit Server VM", "treatment_vm": "OpenJDK 64-Bit Server VM", "baseline_jdk": "", "treatment_jdk": "", "statistical_significance": {"is_significant": false, "confidence_level": "p \u2265 0.05", "t_statistic": 0.08050713047404384, "insufficient_data": false}, "baseline_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [529.9477551502574, 807.0798908497426], "secondary_metrics": {}, "params": {"tableType": "Avro"}, "raw_data": [[677.062125, 637.699542, 672.265792, 687.027833]], "all_samples": [677.062125, 637.699542, 672.265792, 687.027833]}, "treatment_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [370.3376934017702, 1023.83657759823], "secondary_metrics": {}, "params": {"tableType": "Avro"}, "raw_data": [[743.699625, 735.064792, 670.245792, 639.338333]], "all_samples": [743.699625, 735.064792, 670.245792, 639.338333]}, "display_name": "filterCatProjectVarID"}, {"benchmark": "org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.projectID", "mode": "ss", "threads": 1, "baseline_score": 440.66548974999995, "baseline_error": 1462.9852564070745, "treatment_score": 221.71670825, "treatment_error": 148.3911926431316, "unit": "ms/op", "improvement_percent": 49.685937880957006, "speedup": 1.9875159307034314, "status": "improved", "higher_is_better": false, "baseline_vm": "OpenJDK 64-Bit Server VM", "treatment_vm": "OpenJDK 64-Bit Server VM", "baseline_jdk": "", "treatment_jdk": "", "statistical_significance": {"is_significant": false, "confidence_level": "p \u2265 0.05", "t_statistic": 0.14889494662457892, "insufficient_data": false}, "baseline_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [-1022.3197666570745, 1903.6507461570745], "secondary_metrics": {}, "params": {"tableType": "Avro"}, "raw_data": [[382.299375, 760.427292, 393.486792, 226.4485]], "all_samples": [382.299375, 760.427292, 393.486792, 226.4485]}, "treatment_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [73.32551560686841, 370.1079008931316], "secondary_metrics": {}, "params": {"tableType": "Avro"}, "raw_data": [[239.786541, 242.734334, 197.181958, 207.164]], "all_samples": [239.786541, 242.734334, 197.181958, 207.164]}, "display_name": "projectID"}, {"benchmark": "org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.filterVarcatProjectVarID", "mode": "ss", "threads": 1, "baseline_score": 1209.248823, "baseline_error": 690.0974555906051, "treatment_score": 1211.59106225, "treatment_error": 1149.3514800302382, "unit": "ms/op", "improvement_percent": -0.1936937382489516, "speedup": 0.9980668070911233, "status": "regressed", "higher_is_better": false, "baseline_vm": "OpenJDK 64-Bit Server VM", "treatment_vm": "OpenJDK 64-Bit Server VM", "baseline_jdk": "", "treatment_jdk": "", "statistical_significance": {"is_significant": false, "confidence_level": "p \u2265 0.05", "t_statistic": 0.001747140435172045, "insufficient_data": false}, "baseline_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [519.1513674093948, 1899.346278590605], "secondary_metrics": {}, "params": {"tableType": "Avro"}, "raw_data": [[1287.756333, 1096.528084, 1140.449125, 1312.26175]], "all_samples": [1287.756333, 1096.528084, 1140.449125, 1312.26175]}, "treatment_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [62.239582219761814, 2360.9425422802383], "secondary_metrics": {}, "params": {"tableType": "Avro"}, "raw_data": [[1202.793666, 1465.055125, 1107.339042, 1071.176416]], "all_samples": [1202.793666, 1465.055125, 1107.339042, 1071.176416]}, "display_name": "filterVarcatProjectVarID"}, {"benchmark": "org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.filterVarcatProjectID", "mode": "ss", "threads": 1, "baseline_score": 1163.0826040000002, "baseline_error": 981.9654280865808, "treatment_score": 1237.93364575, "treatment_error": 871.3127510666592, "unit": "ms/op", "improvement_percent": -6.435574007605045, "speedup": 0.9395354977167201, "status": "regressed", "higher_is_better": false, "baseline_vm": "OpenJDK 64-Bit Server VM", "treatment_vm": "OpenJDK 64-Bit Server VM", "baseline_jdk": "", "treatment_jdk": "", "statistical_significance": {"is_significant": false, "confidence_level": "p \u2265 0.05", "t_statistic": 0.05701636307377621, "insufficient_data": false}, "baseline_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [181.11717591341937, 2145.048032086581], "secondary_metrics": {}, "params": {"tableType": "Avro"}, "raw_data": [[1296.938041, 1288.6475, 1064.537042, 1002.207833]], "all_samples": [1296.938041, 1288.6475, 1064.537042, 1002.207833]}, "treatment_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [366.6208946833409, 2109.2463968166594], "secondary_metrics": {}, "params": {"tableType": "Avro"}, "raw_data": [[1263.098, 1258.116167, 1377.238583, 1053.281833]], "all_samples": [1263.098, 1258.116167, 1377.238583, 1053.281833]}, "display_name": "filterVarcatProjectID"}, {"benchmark": "org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.projectCat", "mode": "ss", "threads": 1, "baseline_score": 267.950229, "baseline_error": 95.41899703813276, "treatment_score": 277.948896, "treatment_error": 531.7853287480605, "unit": "ms/op", "improvement_percent": -3.731538889634617, "speedup": 0.9640269591140955, "status": "regressed", "higher_is_better": false, "baseline_vm": "OpenJDK 64-Bit Server VM", "treatment_vm": "OpenJDK 64-Bit Server VM", "baseline_jdk": "", "treatment_jdk": "", "statistical_significance": {"is_significant": false, "confidence_level": "p \u2265 0.05", "t_statistic": 0.018506519284409412, "insufficient_data": false}, "baseline_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [172.5312319618672, 363.36922603813275], "secondary_metrics": {}, "params": {"tableType": "Unshredded"}, "raw_data": [[271.981958, 263.770666, 250.411834, 285.636458]], "all_samples": [271.981958, 263.770666, 250.411834, 285.636458]}, "treatment_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [-253.83643274806047, 809.7342247480605], "secondary_metrics": {}, "params": {"tableType": "Unshredded"}, "raw_data": [[239.507541, 252.979667, 219.639084, 399.669292]], "all_samples": [239.507541, 252.979667, 219.639084, 399.669292]}, "display_name": "projectCat"}, {"benchmark": "org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.filterVarcatProjectID", "mode": "ss", "threads": 1, "baseline_score": 1407.513802, "baseline_error": 941.1133012250383, "treatment_score": 1520.8693855, "treatment_error": 1044.354099483208, "unit": "ms/op", "improvement_percent": -8.053603690345906, "speedup": 0.9254665886625542, "status": "regressed", "higher_is_better": false, "baseline_vm": "OpenJDK 64-Bit Server VM", "treatment_vm": "OpenJDK 64-Bit Server VM", "baseline_jdk": "", "treatment_jdk": "", "statistical_significance": {"is_significant": false, "confidence_level": "p \u2265 0.05", "t_statistic": 0.08063225764641548, "insufficient_data": false}, "baseline_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [466.40050077496164, 2348.6271032250384], "secondary_metrics": {}, "params": {"tableType": "Unshredded"}, "raw_data": [[1377.232541, 1621.582708, 1315.906959, 1315.333]], "all_samples": [1377.232541, 1621.582708, 1315.906959, 1315.333]}, "treatment_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [476.51528601679183, 2565.223484983208], "secondary_metrics": {}, "params": {"tableType": "Unshredded"}, "raw_data": [[1521.072625, 1745.018, 1447.090458, 1370.296459]], "all_samples": [1521.072625, 1745.018, 1447.090458, 1370.296459]}, "display_name": "filterVarcatProjectID"}, {"benchmark": "org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.projectVarCat", "mode": "ss", "threads": 1, "baseline_score": 316.56939575, "baseline_error": 984.2616537662446, "treatment_score": 225.40911425000002, "treatment_error": 184.47190831153944, "unit": "ms/op", "improvement_percent": 28.796302713983994, "speedup": 1.4044214529803556, "status": "improved", "higher_is_better": false, "baseline_vm": "OpenJDK 64-Bit Server VM", "treatment_vm": "OpenJDK 64-Bit Server VM", "baseline_jdk": "", "treatment_jdk": "", "statistical_significance": {"is_significant": false, "confidence_level": "p \u2265 0.05", "t_statistic": 0.09103288418616443, "insufficient_data": false}, "baseline_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [-667.6922580162446, 1300.8310495162445], "secondary_metrics": {}, "params": {"tableType": "Shredded"}, "raw_data": [[534.25025, 301.042542, 187.734958, 243.249833]], "all_samples": [534.25025, 301.042542, 187.734958, 243.249833]}, "treatment_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [40.93720593846058, 409.88102256153945], "secondary_metrics": {}, "params": {"tableType": "Shredded"}, "raw_data": [[243.969875, 255.276416, 196.973875, 205.416291]], "all_samples": [243.969875, 255.276416, 196.973875, 205.416291]}, "display_name": "projectVarCat"}, {"benchmark": "org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.explodeArraryColumns", "mode": "ss", "threads": 1, "baseline_score": 907.4238955, "baseline_error": 560.7048634468812, "treatment_score": 1024.91501025, "treatment_error": 795.7590784185929, "unit": "ms/op", "improvement_percent": -12.947765132993466, "speedup": 0.8853650170258105, "status": "regressed", "higher_is_better": false, "baseline_vm": "OpenJDK 64-Bit Server VM", "treatment_vm": "OpenJDK 64-Bit Server VM", "baseline_jdk": "", "treatment_jdk": "", "statistical_significance": {"is_significant": false, "confidence_level": "p \u2265 0.05", "t_statistic": 0.12069446467100582, "insufficient_data": false}, "baseline_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [346.7190320531188, 1468.1287589468811], "secondary_metrics": {}, "params": {"tableType": "Avro"}, "raw_data": [[952.295875, 1006.709708, 848.093333, 822.596666]], "all_samples": [952.295875, 1006.709708, 848.093333, 822.596666]}, "treatment_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [229.1559318314071, 1820.674088668593], "secondary_metrics": {}, "params": {"tableType": "Avro"}, "raw_data": [[1045.493666, 919.268083, 944.382667, 1190.515625]], "all_samples": [1045.493666, 919.268083, 944.382667, 1190.515625]}, "display_name": "explodeArraryColumns"}, {"benchmark": "org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.filterCatProjectID", "mode": "ss", "threads": 1, "baseline_score": 336.48720875, "baseline_error": 142.77645504443487, "treatment_score": 415.12690599999996, "treatment_error": 1033.3452853827896, "unit": "ms/op", "improvement_percent": -23.370783555825135, "speedup": 0.8105646824780854, "status": "regressed", "higher_is_better": false, "baseline_vm": "OpenJDK 64-Bit Server VM", "treatment_vm": "OpenJDK 64-Bit Server VM", "baseline_jdk": "", "treatment_jdk": "", "statistical_significance": {"is_significant": false, "confidence_level": "p \u2265 0.05", "t_statistic": 0.07538586935118594, "insufficient_data": false}, "baseline_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [193.7107537055651, 479.2636637944348], "secondary_metrics": {}, "params": {"tableType": "Unshredded"}, "raw_data": [[356.710667, 331.737, 350.119709, 307.381459]], "all_samples": [356.710667, 331.737, 350.119709, 307.381459]}, "treatment_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [-618.2183793827896, 1448.4721913827896], "secondary_metrics": {}, "params": {"tableType": "Unshredded"}, "raw_data": [[654.105833, 353.946167, 320.993833, 331.461791]], "all_samples": [654.105833, 353.946167, 320.993833, 331.461791]}, "display_name": "filterCatProjectID"}, {"benchmark": "org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.filterArray0ProjectArray0", "mode": "ss", "threads": 1, "baseline_score": 983.186625, "baseline_error": 302.8239322330861, "treatment_score": 1070.1335104999998, "treatment_error": 775.9219718885435, "unit": "ms/op", "improvement_percent": -8.843375539206482, "speedup": 0.9187513663978474, "status": "regressed", "higher_is_better": false, "baseline_vm": "OpenJDK 64-Bit Server VM", "treatment_vm": "OpenJDK 64-Bit Server VM", "baseline_jdk": "", "treatment_jdk": "", "statistical_significance": {"is_significant": false, "confidence_level": "p \u2265 0.05", "t_statistic": 0.10438792516384811, "insufficient_data": false}, "baseline_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [680.3626927669139, 1286.0105572330863], "secondary_metrics": {}, "params": {"tableType": "Shredded"}, "raw_data": [[983.617541, 1030.455375, 999.437209, 919.236375]], "all_samples": [983.617541, 1030.455375, 999.437209, 919.236375]}, "treatment_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [294.2115386114564, 1846.0554823885432], "secondary_metrics": {}, "params": {"tableType": "Shredded"}, "raw_data": [[1192.643916, 999.7445, 1148.791792, 939.353834]], "all_samples": [1192.643916, 999.7445, 1148.791792, 939.353834]}, "display_name": "filterArray0ProjectArray0"}, {"benchmark": "org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.filterArraryCategoryProjectID", "mode": "ss", "threads": 1, "baseline_score": 913.5537292500001, "baseline_error": 546.9510032306532, "treatment_score": 989.01824975, "treatment_error": 703.4969159686469, "unit": "ms/op", "improvement_percent": -8.260545393641381, "speedup": 0.9236975449956808, "status": "regressed", "higher_is_better": false, "baseline_vm": "OpenJDK 64-Bit Server VM", "treatment_vm": "OpenJDK 64-Bit Server VM", "baseline_jdk": "", "treatment_jdk": "", "statistical_significance": {"is_significant": false, "confidence_level": "p \u2265 0.05", "t_statistic": 0.08468670816104044, "insufficient_data": false}, "baseline_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [366.60272601934685, 1460.5047324806533], "secondary_metrics": {}, "params": {"tableType": "Shredded"}, "raw_data": [[961.79975, 887.765084, 997.843458, 806.806625]], "all_samples": [961.79975, 887.765084, 997.843458, 806.806625]}, "treatment_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [285.52133378135306, 1692.515165718647], "secondary_metrics": {}, "params": {"tableType": "Shredded"}, "raw_data": [[1049.824166, 1108.265083, 925.725375, 872.258375]], "all_samples": [1049.824166, 1108.265083, 925.725375, 872.258375]}, "display_name": "filterArraryCategoryProjectID"}, {"benchmark": "org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.projectID", "mode": "ss", "threads": 1, "baseline_score": 242.75226075, "baseline_error": 155.06178395736708, "treatment_score": 212.67388549999998, "treatment_error": 164.50639636605632, "unit": "ms/op", "improvement_percent": 12.390564420315094, "speedup": 1.141429565643592, "status": "improved", "higher_is_better": false, "baseline_vm": "OpenJDK 64-Bit Server VM", "treatment_vm": "OpenJDK 64-Bit Server VM", "baseline_jdk": "", "treatment_jdk": "", "statistical_significance": {"is_significant": false, "confidence_level": "p \u2265 0.05", "t_statistic": 0.13305042171627715, "insufficient_data": false}, "baseline_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [87.69047679263292, 397.8140447073671], "secondary_metrics": {}, "params": {"tableType": "Shredded"}, "raw_data": [[255.940333, 268.475459, 215.087792, 231.505459]], "all_samples": [255.940333, 268.475459, 215.087792, 231.505459]}, "treatment_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [48.16748913394366, 377.1802818660563], "secondary_metrics": {}, "params": {"tableType": "Shredded"}, "raw_data": [[223.045166, 242.87875, 199.497459, 185.274167]], "all_samples": [223.045166, 242.87875, 199.497459, 185.274167]}, "display_name": "projectID"}, {"benchmark": "org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.filterCat", "mode": "ss", "threads": 1, "baseline_score": 357.78787524999996, "baseline_error": 461.33110537661156, "treatment_score": 422.67562499999997, "treatment_error": 794.842320920723, "unit": "ms/op", "improvement_percent": -18.135815727310625, "speedup": 0.8464833410963786, "status": "regressed", "higher_is_better": false, "baseline_vm": "OpenJDK 64-Bit Server VM", "treatment_vm": "OpenJDK 64-Bit Server VM", "baseline_jdk": "", "treatment_jdk": "", "statistical_significance": {"is_significant": false, "confidence_level": "p \u2265 0.05", "t_statistic": 0.07060524980944767, "insufficient_data": false}, "baseline_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [-103.5432301266116, 819.1189806266116], "secondary_metrics": {}, "params": {"tableType": "Shredded"}, "raw_data": [[449.732459, 378.844375, 299.233875, 303.340792]], "all_samples": [449.732459, 378.844375, 299.233875, 303.340792]}, "treatment_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [-372.166695920723, 1217.517945920723], "secondary_metrics": {}, "params": {"tableType": "Shredded"}, "raw_data": [[595.154, 426.6925, 329.48825, 339.36775]], "all_samples": [595.154, 426.6925, 329.48825, 339.36775]}, "display_name": "filterCat"}, {"benchmark": "org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.filterVarcatProjectVarID", "mode": "ss", "threads": 1, "baseline_score": 2528.25475, "baseline_error": 1507.3338806487031, "treatment_score": 2448.58832275, "treatment_error": 1487.841584315778, "unit": "ms/op", "improvement_percent": 3.1510443023987276, "speedup": 1.0325356559572771, "status": "improved", "higher_is_better": false, "baseline_vm": "OpenJDK 64-Bit Server VM", "treatment_vm": "OpenJDK 64-Bit Server VM", "baseline_jdk": "", "treatment_jdk": "", "statistical_significance": {"is_significant": false, "confidence_level": "p \u2265 0.05", "t_statistic": 0.03761481002821228, "insufficient_data": false}, "baseline_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [1020.9208693512969, 4035.588630648703], "secondary_metrics": {}, "params": {"tableType": "Shredded"}, "raw_data": [[2493.186667, 2361.319125, 2390.78975, 2867.723458]], "all_samples": [2493.186667, 2361.319125, 2390.78975, 2867.723458]}, "treatment_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [960.7467384342219, 3936.429907065778], "secondary_metrics": {}, "params": {"tableType": "Shredded"}, "raw_data": [[2340.007416, 2778.648542, 2420.861792, 2254.835541]], "all_samples": [2340.007416, 2778.648542, 2420.861792, 2254.835541]}, "display_name": "filterVarcatProjectVarID"}, {"benchmark": "org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.filterArraryCategoryProjectID", "mode": "ss", "threads": 1, "baseline_score": 946.754958, "baseline_error": 368.2196015928331, "treatment_score": 1052.12560425, "treatment_error": 939.7193015172501, "unit": "ms/op", "improvement_percent": -11.129664055057416, "speedup": 0.8998497462428807, "status": "regressed", "higher_is_better": false, "baseline_vm": "OpenJDK 64-Bit Server VM", "treatment_vm": "OpenJDK 64-Bit Server VM", "baseline_jdk": "", "treatment_jdk": "", "statistical_significance": {"is_significant": false, "confidence_level": "p \u2265 0.05", "t_statistic": 0.10440118661424426, "insufficient_data": false}, "baseline_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [578.5353564071669, 1314.974559592833], "secondary_metrics": {}, "params": {"tableType": "Unshredded"}, "raw_data": [[943.992958, 1005.693083, 967.049583, 870.284208]], "all_samples": [943.992958, 1005.693083, 967.049583, 870.284208]}, "treatment_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [112.40630273274985, 1991.84490576725], "secondary_metrics": {}, "params": {"tableType": "Unshredded"}, "raw_data": [[1232.54625, 1014.954541, 1078.607084, 882.394542]], "all_samples": [1232.54625, 1014.954541, 1078.607084, 882.394542]}, "display_name": "filterArraryCategoryProjectID"}, {"benchmark": "org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.projectArrayCategory", "mode": "ss", "threads": 1, "baseline_score": 439.35299999999995, "baseline_error": 1219.0926255003687, "treatment_score": 390.55210425, "treatment_error": 894.29807823009, "unit": "ms/op", "improvement_percent": 11.107445664420169, "speedup": 1.124953611103223, "status": "improved", "higher_is_better": false, "baseline_vm": "OpenJDK 64-Bit Server VM", "treatment_vm": "OpenJDK 64-Bit Server VM", "baseline_jdk": "", "treatment_jdk": "", "statistical_significance": {"is_significant": false, "confidence_level": "p \u2265 0.05", "t_statistic": 0.03227705270504045, "insufficient_data": false}, "baseline_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [-779.7396255003688, 1658.4456255003688], "secondary_metrics": {}, "params": {"tableType": "Avro"}, "raw_data": [[528.945333, 662.501042, 287.88575, 278.079875]], "all_samples": [528.945333, 662.501042, 287.88575, 278.079875]}, "treatment_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [-503.74597398009, 1284.85018248009], "secondary_metrics": {}, "params": {"tableType": "Avro"}, "raw_data": [[234.719917, 317.067791, 532.42925, 477.991459]], "all_samples": [234.719917, 317.067791, 532.42925, 477.991459]}, "display_name": "projectArrayCategory"}, {"benchmark": "org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.filterCat", "mode": "ss", "threads": 1, "baseline_score": 339.8761875, "baseline_error": 353.5853599679954, "treatment_score": 449.36002075, "treatment_error": 938.0618124067279, "unit": "ms/op", "improvement_percent": -32.21285788078342, "speedup": 0.7563560882268364, "status": "regressed", "higher_is_better": false, "baseline_vm": "OpenJDK 64-Bit Server VM", "treatment_vm": "OpenJDK 64-Bit Server VM", "baseline_jdk": "", "treatment_jdk": "", "statistical_significance": {"is_significant": false, "confidence_level": "p \u2265 0.05", "t_statistic": 0.10921209283506075, "insufficient_data": false}, "baseline_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [-13.709172467995359, 693.4615474679954], "secondary_metrics": {}, "params": {"tableType": "Unshredded"}, "raw_data": [[400.910125, 363.12125, 321.873166, 273.600209]], "all_samples": [400.910125, 363.12125, 321.873166, 273.600209]}, "treatment_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [-488.7017916567279, 1387.4218331567279], "secondary_metrics": {}, "params": {"tableType": "Unshredded"}, "raw_data": [[647.283333, 384.148667, 308.885208, 457.122875]], "all_samples": [647.283333, 384.148667, 308.885208, 457.122875]}, "display_name": "filterCat"}, {"benchmark": "org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.filterVarcatProjectVarID", "mode": "ss", "threads": 1, "baseline_score": 1555.453802, "baseline_error": 938.7871068191956, "treatment_score": 1606.48828125, "treatment_error": 1178.555601625091, "unit": "ms/op", "improvement_percent": -3.2810025720069573, "speedup": 0.9682322741811161, "status": "regressed", "higher_is_better": false, "baseline_vm": "OpenJDK 64-Bit Server VM", "treatment_vm": "OpenJDK 64-Bit Server VM", "baseline_jdk": "", "treatment_jdk": "", "statistical_significance": {"is_significant": false, "confidence_level": "p \u2265 0.05", "t_statistic": 0.033870427060567705, "insufficient_data": false}, "baseline_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [616.6666951808044, 2494.2409088191957], "secondary_metrics": {}, "params": {"tableType": "Unshredded"}, "raw_data": [[1478.51225, 1486.898417, 1773.310625, 1483.093916]], "all_samples": [1478.51225, 1486.898417, 1773.310625, 1483.093916]}, "treatment_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [427.93267962490904, 2785.043882875091], "secondary_metrics": {}, "params": {"tableType": "Unshredded"}, "raw_data": [[1713.235208, 1773.720875, 1576.494792, 1362.50225]], "all_samples": [1713.235208, 1773.720875, 1576.494792, 1362.50225]}, "display_name": "filterVarcatProjectVarID"}, {"benchmark": "org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.filterVarCat", "mode": "ss", "threads": 1, "baseline_score": 2422.36829175, "baseline_error": 841.8141442805537, "treatment_score": 2434.5305935, "treatment_error": 438.11571331693096, "unit": "ms/op", "improvement_percent": -0.502083097414293, "speedup": 0.995004251832993, "status": "regressed", "higher_is_better": false, "baseline_vm": "OpenJDK 64-Bit Server VM", "treatment_vm": "OpenJDK 64-Bit Server VM", "baseline_jdk": "", "treatment_jdk": "", "statistical_significance": {"is_significant": false, "confidence_level": "p \u2265 0.05", "t_statistic": 0.012815945833845328, "insufficient_data": false}, "baseline_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [1580.5541474694464, 3264.1824360305536], "secondary_metrics": {}, "params": {"tableType": "Shredded"}, "raw_data": [[2294.551417, 2327.849875, 2512.033042, 2555.038833]], "all_samples": [2294.551417, 2327.849875, 2512.033042, 2555.038833]}, "treatment_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [1996.4148801830693, 2872.646306816931], "secondary_metrics": {}, "params": {"tableType": "Shredded"}, "raw_data": [[2435.004666, 2339.376417, 2493.126, 2470.615291]], "all_samples": [2435.004666, 2339.376417, 2493.126, 2470.615291]}, "display_name": "filterVarCat"}, {"benchmark": "org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.explodeArraryColumns", "mode": "ss", "threads": 1, "baseline_score": 857.97451025, "baseline_error": 787.1428596049884, "treatment_score": 1090.88544825, "treatment_error": 3341.300040466466, "unit": "ms/op", "improvement_percent": -27.146603450041145, "speedup": 0.7864936796309492, "status": "regressed", "higher_is_better": false, "baseline_vm": "OpenJDK 64-Bit Server VM", "treatment_vm": "OpenJDK 64-Bit Server VM", "baseline_jdk": "", "treatment_jdk": "", "statistical_significance": {"is_significant": false, "confidence_level": "p \u2265 0.05", "t_statistic": 0.06784935628805082, "insufficient_data": false}, "baseline_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [70.83165064501156, 1645.1173698549883], "secondary_metrics": {}, "params": {"tableType": "Unshredded"}, "raw_data": [[967.730459, 848.026291, 691.049708, 925.091583]], "all_samples": [967.730459, 848.026291, 691.049708, 925.091583]}, "treatment_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [-2250.4145922164657, 4432.185488716466], "secondary_metrics": {}, "params": {"tableType": "Unshredded"}, "raw_data": [[996.665583, 1845.268334, 816.505167, 705.102709]], "all_samples": [996.665583, 1845.268334, 816.505167, 705.102709]}, "display_name": "explodeArraryColumns"}, {"benchmark": "org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.projectVarID", "mode": "ss", "threads": 1, "baseline_score": 261.42762500000003, "baseline_error": 247.99041778257765, "treatment_score": 237.965927, "treatment_error": 146.3098850936587, "unit": "ms/op", "improvement_percent": 8.974452489479654, "speedup": 1.0985926779340978, "status": "improved", "higher_is_better": false, "baseline_vm": "OpenJDK 64-Bit Server VM", "treatment_vm": "OpenJDK 64-Bit Server VM", "baseline_jdk": "", "treatment_jdk": "", "statistical_significance": {"is_significant": false, "confidence_level": "p \u2265 0.05", "t_statistic": 0.08148298025493422, "insufficient_data": false}, "baseline_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [13.437207217422383, 509.4180427825777], "secondary_metrics": {}, "params": {"tableType": "Shredded"}, "raw_data": [[255.721542, 310.886292, 261.715166, 217.3875]], "all_samples": [255.721542, 310.886292, 261.715166, 217.3875]}, "treatment_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [91.6560419063413, 384.2758120936587], "secondary_metrics": {}, "params": {"tableType": "Shredded"}, "raw_data": [[259.482958, 255.293084, 215.3595, 221.728166]], "all_samples": [259.482958, 255.293084, 215.3595, 221.728166]}, "display_name": "projectVarID"}, {"benchmark": "org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.filterArraryCategoryProjectID", "mode": "ss", "threads": 1, "baseline_score": 1108.9107815, "baseline_error": 542.6810052378067, "treatment_score": 1338.64591675, "treatment_error": 1375.413688560258, "unit": "ms/op", "improvement_percent": -20.71718835118928, "speedup": 0.8283824479831403, "status": "regressed", "higher_is_better": false, "baseline_vm": "OpenJDK 64-Bit Server VM", "treatment_vm": "OpenJDK 64-Bit Server VM", "baseline_jdk": "", "treatment_jdk": "", "statistical_significance": {"is_significant": false, "confidence_level": "p \u2265 0.05", "t_statistic": 0.15537315008651462, "insufficient_data": false}, "baseline_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [566.2297762621932, 1651.5917867378066], "secondary_metrics": {}, "params": {"tableType": "Avro"}, "raw_data": [[1190.901959, 1105.99425, 994.204625, 1144.542292]], "all_samples": [1190.901959, 1105.99425, 994.204625, 1144.542292]}, "treatment_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [-36.767771810257955, 2714.059605310258], "secondary_metrics": {}, "params": {"tableType": "Avro"}, "raw_data": [[1596.068917, 1403.801917, 1259.120583, 1095.59225]], "all_samples": [1596.068917, 1403.801917, 1259.120583, 1095.59225]}, "display_name": "filterArraryCategoryProjectID"}, {"benchmark": "org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.filterVarCat", "mode": "ss", "threads": 1, "baseline_score": 1531.25098925, "baseline_error": 601.6041553870249, "treatment_score": 1555.455656, "treatment_error": 764.8576072077648, "unit": "ms/op", "improvement_percent": -1.58071190940784, "speedup": 0.9844388577349452, "status": "regressed", "higher_is_better": false, "baseline_vm": "OpenJDK 64-Bit Server VM", "treatment_vm": "OpenJDK 64-Bit Server VM", "baseline_jdk": "", "treatment_jdk": "", "statistical_significance": {"is_significant": false, "confidence_level": "p \u2265 0.05", "t_statistic": 0.024873625289850293, "insufficient_data": false}, "baseline_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [929.6468338629751, 2132.8551446370248], "secondary_metrics": {}, "params": {"tableType": "Unshredded"}, "raw_data": [[1616.217416, 1596.685208, 1416.10625, 1495.995083]], "all_samples": [1616.217416, 1596.685208, 1416.10625, 1495.995083]}, "treatment_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [790.5980487922353, 2320.313263207765], "secondary_metrics": {}, "params": {"tableType": "Unshredded"}, "raw_data": [[1531.133625, 1721.950791, 1441.882042, 1526.856166]], "all_samples": [1531.133625, 1721.950791, 1441.882042, 1526.856166]}, "display_name": "filterVarCat"}, {"benchmark": "org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.filterCat", "mode": "ss", "threads": 1, "baseline_score": 688.508927, "baseline_error": 557.0074111612762, "treatment_score": 860.60283325, "treatment_error": 661.3845946945362, "unit": "ms/op", "improvement_percent": -24.995159757747054, "speedup": 0.8000309787499761, "status": "regressed", "higher_is_better": false, "baseline_vm": "OpenJDK 64-Bit Server VM", "treatment_vm": "OpenJDK 64-Bit Server VM", "baseline_jdk": "", "treatment_jdk": "", "statistical_significance": {"is_significant": false, "confidence_level": "p \u2265 0.05", "t_statistic": 0.1990240798143114, "insufficient_data": false}, "baseline_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [131.50151583872378, 1245.516338161276], "secondary_metrics": {}, "params": {"tableType": "Avro"}, "raw_data": [[775.373584, 749.215917, 623.957041, 605.489166]], "all_samples": [775.373584, 749.215917, 623.957041, 605.489166]}, "treatment_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [199.2182385554638, 1521.9874279445362], "secondary_metrics": {}, "params": {"tableType": "Avro"}, "raw_data": [[935.62575, 710.631916, 882.293125, 913.860542]], "all_samples": [935.62575, 710.631916, 882.293125, 913.860542]}, "display_name": "filterCat"}, {"benchmark": "org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.filterCatProjectID", "mode": "ss", "threads": 1, "baseline_score": 664.504979, "baseline_error": 234.6778503734251, "treatment_score": 837.62399975, "treatment_error": 684.0426275515522, "unit": "ms/op", "improvement_percent": -26.052328608661934, "speedup": 0.7933213222141801, "status": "regressed", "higher_is_better": false, "baseline_vm": "OpenJDK 64-Bit Server VM", "treatment_vm": "OpenJDK 64-Bit Server VM", "baseline_jdk": "", "treatment_jdk": "", "statistical_significance": {"is_significant": false, "confidence_level": "p \u2265 0.05", "t_statistic": 0.2393860952302931, "insufficient_data": false}, "baseline_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [429.82712862657496, 899.1828293734252], "secondary_metrics": {}, "params": {"tableType": "Avro"}, "raw_data": [[670.423541, 656.074959, 709.621, 621.900416]], "all_samples": [670.423541, 656.074959, 709.621, 621.900416]}, "treatment_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [153.58137219844787, 1521.6666273015521], "secondary_metrics": {}, "params": {"tableType": "Avro"}, "raw_data": [[842.931042, 686.805708, 921.684916, 899.074333]], "all_samples": [842.931042, 686.805708, 921.684916, 899.074333]}, "display_name": "filterCatProjectID"}, {"benchmark": "org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.count", "mode": "ss", "threads": 1, "baseline_score": 237.72070825, "baseline_error": 337.22192023248004, "treatment_score": 884.6361979999999, "treatment_error": 4148.921839498491, "unit": "ms/op", "improvement_percent": -272.1325771373979, "speedup": 0.26872143462752585, "status": "regressed", "higher_is_better": false, "baseline_vm": "OpenJDK 64-Bit Server VM", "treatment_vm": "OpenJDK 64-Bit Server VM", "baseline_jdk": "", "treatment_jdk": "", "statistical_significance": {"is_significant": false, "confidence_level": "p \u2265 0.05", "t_statistic": 0.1554112542411924, "insufficient_data": false}, "baseline_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [-99.50121198248004, 574.94262848248], "secondary_metrics": {}, "params": {"tableType": "Unshredded"}, "raw_data": [[275.585167, 283.6525, 219.440541, 172.204625]], "all_samples": [275.585167, 283.6525, 219.440541, 172.204625]}, "treatment_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [-3264.285641498491, 5033.558037498491], "secondary_metrics": {}, "params": {"tableType": "Unshredded"}, "raw_data": [[537.076917, 385.907875, 803.271917, 1812.288083]], "all_samples": [537.076917, 385.907875, 803.271917, 1812.288083]}, "display_name": "count"}, {"benchmark": "org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.filterVarCat", "mode": "ss", "threads": 1, "baseline_score": 1253.2496457500001, "baseline_error": 859.1747559440835, "treatment_score": 1298.807021, "treatment_error": 1783.783167500326, "unit": "ms/op", "improvement_percent": -3.6351396870123507, "speedup": 0.9649236764866549, "status": "regressed", "higher_is_better": false, "baseline_vm": "OpenJDK 64-Bit Server VM", "treatment_vm": "OpenJDK 64-Bit Server VM", "baseline_jdk": "", "treatment_jdk": "", "statistical_significance": {"is_significant": false, "confidence_level": "p \u2265 0.05", "t_statistic": 0.023009762459404802, "insufficient_data": false}, "baseline_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [394.07488980591665, 2112.424401694084], "secondary_metrics": {}, "params": {"tableType": "Avro"}, "raw_data": [[1437.851708, 1250.316667, 1197.38175, 1127.448458]], "all_samples": [1437.851708, 1250.316667, 1197.38175, 1127.448458]}, "treatment_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [-484.97614650032597, 3082.590188500326], "secondary_metrics": {}, "params": {"tableType": "Avro"}, "raw_data": [[1211.195708, 1699.916959, 1215.856875, 1068.258542]], "all_samples": [1211.195708, 1699.916959, 1215.856875, 1068.258542]}, "display_name": "filterVarCat"}, {"benchmark": "org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.projectVarCat", "mode": "ss", "threads": 1, "baseline_score": 308.77515625, "baseline_error": 982.4621803150925, "treatment_score": 372.74131225, "treatment_error": 740.059705170654, "unit": "ms/op", "improvement_percent": -20.716095419350957, "speedup": 0.8283899479403627, "status": "regressed", "higher_is_better": false, "baseline_vm": "OpenJDK 64-Bit Server VM", "treatment_vm": "OpenJDK 64-Bit Server VM", "baseline_jdk": "", "treatment_jdk": "", "statistical_significance": {"is_significant": false, "confidence_level": "p \u2265 0.05", "t_statistic": 0.05200465593057757, "insufficient_data": false}, "baseline_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [-673.6870240650925, 1291.2373365650924], "secondary_metrics": {}, "params": {"tableType": "Avro"}, "raw_data": [[251.234708, 247.849292, 201.716625, 534.3]], "all_samples": [251.234708, 247.849292, 201.716625, 534.3]}, "treatment_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [-367.31839292065393, 1112.801017420654], "secondary_metrics": {}, "params": {"tableType": "Avro"}, "raw_data": [[232.390583, 355.619916, 510.459417, 392.495333]], "all_samples": [232.390583, 355.619916, 510.459417, 392.495333]}, "display_name": "projectVarCat"}, {"benchmark": "org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.filterCatProjectID", "mode": "ss", "threads": 1, "baseline_score": 373.00282325, "baseline_error": 526.8441003220266, "treatment_score": 410.754542, "treatment_error": 617.6245304351379, "unit": "ms/op", "improvement_percent": -10.12102761610934, "speedup": 0.908091780151271, "status": "regressed", "higher_is_better": false, "baseline_vm": "OpenJDK 64-Bit Server VM", "treatment_vm": "OpenJDK 64-Bit Server VM", "baseline_jdk": "", "treatment_jdk": "", "statistical_significance": {"is_significant": false, "confidence_level": "p \u2265 0.05", "t_statistic": 0.04650352359578713, "insufficient_data": false}, "baseline_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [-153.84127707202663, 899.8469235720266], "secondary_metrics": {}, "params": {"tableType": "Shredded"}, "raw_data": [[490.548375, 362.702542, 330.944209, 307.816167]], "all_samples": [490.548375, 362.702542, 330.944209, 307.816167]}, "treatment_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [-206.86998843513788, 1028.379072435138], "secondary_metrics": {}, "params": {"tableType": "Shredded"}, "raw_data": [[440.853959, 387.049167, 293.721792, 521.39325]], "all_samples": [440.853959, 387.049167, 293.721792, 521.39325]}, "display_name": "filterCatProjectID"}, {"benchmark": "org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.filterVarcatProjectID", "mode": "ss", "threads": 1, "baseline_score": 2432.3303435000003, "baseline_error": 1324.0506575637594, "treatment_score": 2497.7678855, "treatment_error": 1811.3249775000554, "unit": "ms/op", "improvement_percent": -2.6903229725711664, "speedup": 0.9738015920615055, "status": "regressed", "higher_is_better": false, "baseline_vm": "OpenJDK 64-Bit Server VM", "treatment_vm": "OpenJDK 64-Bit Server VM", "baseline_jdk": "", "treatment_jdk": "", "statistical_significance": {"is_significant": false, "confidence_level": "p \u2265 0.05", "t_statistic": 0.029165539432947973, "insufficient_data": false}, "baseline_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [1108.2796859362409, 3756.38100106376], "secondary_metrics": {}, "params": {"tableType": "Shredded"}, "raw_data": [[2250.7955, 2274.6005, 2529.278166, 2674.647208]], "all_samples": [2250.7955, 2274.6005, 2529.278166, 2674.647208]}, "treatment_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [686.4429079999445, 4309.092863000055], "secondary_metrics": {}, "params": {"tableType": "Shredded"}, "raw_data": [[2284.741542, 2529.126042, 2882.580458, 2294.6235]], "all_samples": [2284.741542, 2529.126042, 2882.580458, 2294.6235]}, "display_name": "filterVarcatProjectID"}, {"benchmark": "org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.explodeArraryColumns", "mode": "ss", "threads": 1, "baseline_score": 1011.157156, "baseline_error": 539.9970090526267, "treatment_score": 836.73053125, "treatment_error": 468.2923845839315, "unit": "ms/op", "improvement_percent": 17.250199310264286, "speedup": 1.2084621251831487, "status": "improved", "higher_is_better": false, "baseline_vm": "OpenJDK 64-Bit Server VM", "treatment_vm": "OpenJDK 64-Bit Server VM", "baseline_jdk": "", "treatment_jdk": "", "statistical_significance": {"is_significant": false, "confidence_level": "p \u2265 0.05", "t_statistic": 0.24403220932688927, "insufficient_data": false}, "baseline_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [471.1601469473733, 1551.1541650526267], "secondary_metrics": {}, "params": {"tableType": "Shredded"}, "raw_data": [[1122.859334, 966.986083, 931.344291, 1023.438916]], "all_samples": [1122.859334, 966.986083, 931.344291, 1023.438916]}, "treatment_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [368.4381466660685, 1305.0229158339316], "secondary_metrics": {}, "params": {"tableType": "Shredded"}, "raw_data": [[850.804584, 832.076083, 920.029417, 744.012041]], "all_samples": [850.804584, 832.076083, 920.029417, 744.012041]}, "display_name": "explodeArraryColumns"}, {"benchmark": "org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.projectVarCat", "mode": "ss", "threads": 1, "baseline_score": 255.70280225, "baseline_error": 163.68731647169713, "treatment_score": 230.8324165, "treatment_error": 302.67154308446743, "unit": "ms/op", "improvement_percent": 9.726285958213428, "speedup": 1.1077421712560895, "status": "improved", "higher_is_better": false, "baseline_vm": "OpenJDK 64-Bit Server VM", "treatment_vm": "OpenJDK 64-Bit Server VM", "baseline_jdk": "", "treatment_jdk": "", "statistical_significance": {"is_significant": false, "confidence_level": "p \u2265 0.05", "t_statistic": 0.07227699148186445, "insufficient_data": false}, "baseline_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [92.01548577830286, 419.39011872169715], "secondary_metrics": {}, "params": {"tableType": "Unshredded"}, "raw_data": [[286.00775, 265.46225, 228.29725, 243.043959]], "all_samples": [286.00775, 265.46225, 228.29725, 243.043959]}, "treatment_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [-71.83912658446744, 533.5039595844675], "secondary_metrics": {}, "params": {"tableType": "Unshredded"}, "raw_data": [[243.3815, 289.6275, 209.690833, 180.629833]], "all_samples": [243.3815, 289.6275, 209.690833, 180.629833]}, "display_name": "projectVarCat"}, {"benchmark": "org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.filterArray0ProjectArray0", "mode": "ss", "threads": 1, "baseline_score": 1173.67084375, "baseline_error": 1174.5411500158732, "treatment_score": 1164.33214575, "treatment_error": 912.2365835826672, "unit": "ms/op", "improvement_percent": 0.7956828824478325, "speedup": 1.008020647745652, "status": "improved", "higher_is_better": false, "baseline_vm": "OpenJDK 64-Bit Server VM", "treatment_vm": "OpenJDK 64-Bit Server VM", "baseline_jdk": "", "treatment_jdk": "", "statistical_significance": {"is_significant": false, "confidence_level": "p \u2265 0.05", "t_statistic": 0.006279441420873931, "insufficient_data": false}, "baseline_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [-0.8703062658732961, 2348.211993765873], "secondary_metrics": {}, "params": {"tableType": "Avro"}, "raw_data": [[1138.529708, 1414.131167, 1168.422042, 973.600458]], "all_samples": [1138.529708, 1414.131167, 1168.422042, 973.600458]}, "treatment_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [252.0955621673329, 2076.5687293326673], "secondary_metrics": {}, "params": {"tableType": "Avro"}, "raw_data": [[1334.925833, 1214.91025, 1096.570042, 1010.922458]], "all_samples": [1334.925833, 1214.91025, 1096.570042, 1010.922458]}, "display_name": "filterArray0ProjectArray0"}, {"benchmark": "org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.projectArrayCategory", "mode": "ss", "threads": 1, "baseline_score": 285.06508325000004, "baseline_error": 236.72411079398333, "treatment_score": 222.50263525, "treatment_error": 165.900604831025, "unit": "ms/op", "improvement_percent": 21.946724336327513, "speedup": 1.281176211372535, "status": "improved", "higher_is_better": false, "baseline_vm": "OpenJDK 64-Bit Server VM", "treatment_vm": "OpenJDK 64-Bit Server VM", "baseline_jdk": "", "treatment_jdk": "", "statistical_significance": {"is_significant": false, "confidence_level": "p \u2265 0.05", "t_statistic": 0.2164268308623787, "insufficient_data": false}, "baseline_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [48.340972456016715, 521.7891940439833], "secondary_metrics": {}, "params": {"tableType": "Shredded"}, "raw_data": [[328.319042, 287.70075, 238.719208, 285.521333]], "all_samples": [328.319042, 287.70075, 238.719208, 285.521333]}, "treatment_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [56.602030418975005, 388.403240081025], "secondary_metrics": {}, "params": {"tableType": "Shredded"}, "raw_data": [[243.609458, 245.805167, 201.471416, 199.1245]], "all_samples": [243.609458, 245.805167, 201.471416, 199.1245]}, "display_name": "projectArrayCategory"}, {"benchmark": "org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.projectArrayCategory", "mode": "ss", "threads": 1, "baseline_score": 298.689802, "baseline_error": 332.8645697349746, "treatment_score": 247.58672925, "treatment_error": 342.3309165599922, "unit": "ms/op", "improvement_percent": 17.10907851818791, "speedup": 1.2064047330194294, "status": "improved", "higher_is_better": false, "baseline_vm": "OpenJDK 64-Bit Server VM", "treatment_vm": "OpenJDK 64-Bit Server VM", "baseline_jdk": "", "treatment_jdk": "", "statistical_significance": {"is_significant": false, "confidence_level": "p \u2265 0.05", "t_statistic": 0.1070261252359436, "insufficient_data": false}, "baseline_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [-34.17476773497464, 631.5543717349747], "secondary_metrics": {}, "params": {"tableType": "Unshredded"}, "raw_data": [[354.818, 326.794875, 271.940458, 241.205875]], "all_samples": [354.818, 326.794875, 271.940458, 241.205875]}, "treatment_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [-94.74418730999221, 589.9176458099922], "secondary_metrics": {}, "params": {"tableType": "Unshredded"}, "raw_data": [[305.773416, 274.082042, 224.561334, 185.930125]], "all_samples": [305.773416, 274.082042, 224.561334, 185.930125]}, "display_name": "projectArrayCategory"}, {"benchmark": "org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.projectID", "mode": "ss", "threads": 1, "baseline_score": 262.197625, "baseline_error": 483.1545943858301, "treatment_score": 251.35704175, "treatment_error": 173.9727421201953, "unit": "ms/op", "improvement_percent": 4.134508560098517, "speedup": 1.043128225788009, "status": "improved", "higher_is_better": false, "baseline_vm": "OpenJDK 64-Bit Server VM", "treatment_vm": "OpenJDK 64-Bit Server VM", "baseline_jdk": "", "treatment_jdk": "", "statistical_significance": {"is_significant": false, "confidence_level": "p \u2265 0.05", "t_statistic": 0.021110259307433404, "insufficient_data": false}, "baseline_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [-220.95696938583006, 745.35221938583], "secondary_metrics": {}, "params": {"tableType": "Unshredded"}, "raw_data": [[353.230042, 251.931167, 171.232, 272.397291]], "all_samples": [353.230042, 251.931167, 171.232, 272.397291]}, "treatment_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [77.3842996298047, 425.32978387019534], "secondary_metrics": {}, "params": {"tableType": "Unshredded"}, "raw_data": [[219.754959, 285.534333, 248.59225, 251.546625]], "all_samples": [219.754959, 285.534333, 248.59225, 251.546625]}, "display_name": "projectID"}, {"benchmark": "org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.projectCat", "mode": "ss", "threads": 1, "baseline_score": 259.74152075, "baseline_error": 114.6655236647572, "treatment_score": 233.9333855, "treatment_error": 172.7623699555163, "unit": "ms/op", "improvement_percent": 9.936083832680799, "speedup": 1.1103225826225644, "status": "improved", "higher_is_better": false, "baseline_vm": "OpenJDK 64-Bit Server VM", "treatment_vm": "OpenJDK 64-Bit Server VM", "baseline_jdk": "", "treatment_jdk": "", "statistical_significance": {"is_significant": false, "confidence_level": "p \u2265 0.05", "t_statistic": 0.12446508913622499, "insufficient_data": false}, "baseline_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [145.07599708524282, 374.4070444147572], "secondary_metrics": {}, "params": {"tableType": "Shredded"}, "raw_data": [[239.677375, 250.329958, 271.392458, 277.566292]], "all_samples": [239.677375, 250.329958, 271.392458, 277.566292]}, "treatment_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [61.17101554448371, 406.6957554555163], "secondary_metrics": {}, "params": {"tableType": "Shredded"}, "raw_data": [[226.385458, 272.694292, 211.333917, 225.319875]], "all_samples": [226.385458, 272.694292, 211.333917, 225.319875]}, "display_name": "projectCat"}, {"benchmark": "org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.filterArray0ProjectArray0", "mode": "ss", "threads": 1, "baseline_score": 951.1756457500001, "baseline_error": 406.5050970976308, "treatment_score": 1264.479781, "treatment_error": 2479.5095410808785, "unit": "ms/op", "improvement_percent": -32.93862039570623, "speedup": 0.7522268525304321, "status": "regressed", "higher_is_better": false, "baseline_vm": "OpenJDK 64-Bit Server VM", "treatment_vm": "OpenJDK 64-Bit Server VM", "baseline_jdk": "", "treatment_jdk": "", "statistical_significance": {"is_significant": false, "confidence_level": "p \u2265 0.05", "t_statistic": 0.12469265525436922, "insufficient_data": false}, "baseline_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [544.6705486523692, 1357.6807428476309], "secondary_metrics": {}, "params": {"tableType": "Unshredded"}, "raw_data": [[908.593292, 1031.058708, 893.913875, 971.136708]], "all_samples": [908.593292, 1031.058708, 893.913875, 971.136708]}, "treatment_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [-1215.0297600808785, 3743.9893220808785], "secondary_metrics": {}, "params": {"tableType": "Unshredded"}, "raw_data": [[1223.035666, 987.857, 1027.993458, 1819.033]], "all_samples": [1223.035666, 987.857, 1027.993458, 1819.033]}, "display_name": "filterArray0ProjectArray0"}, {"benchmark": "org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.projectCat", "mode": "ss", "threads": 1, "baseline_score": 450.678583, "baseline_error": 1541.0101697446826, "treatment_score": 334.6849585, "treatment_error": 1183.1137141534396, "unit": "ms/op", "improvement_percent": 25.737549747288526, "speedup": 1.3465755527821248, "status": "improved", "higher_is_better": false, "baseline_vm": "OpenJDK 64-Bit Server VM", "treatment_vm": "OpenJDK 64-Bit Server VM", "baseline_jdk": "", "treatment_jdk": "", "statistical_significance": {"is_significant": false, "confidence_level": "p \u2265 0.05", "t_statistic": 0.05970436821435856, "insufficient_data": false}, "baseline_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [-1090.3315867446827, 1991.6887527446825], "secondary_metrics": {}, "params": {"tableType": "Avro"}, "raw_data": [[489.04775, 773.17975, 273.005916, 267.480916]], "all_samples": [489.04775, 773.17975, 273.005916, 267.480916]}, "treatment_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [-848.4287556534396, 1517.7986726534396], "secondary_metrics": {}, "params": {"tableType": "Avro"}, "raw_data": [[273.771, 247.865417, 210.557917, 606.5455]], "all_samples": [273.771, 247.865417, 210.557917, 606.5455]}, "display_name": "projectCat"}, {"benchmark": "org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.projectVarID", "mode": "ss", "threads": 1, "baseline_score": 230.56479175, "baseline_error": 255.9760168624346, "treatment_score": 226.67359375, "treatment_error": 195.09243213153596, "unit": "ms/op", "improvement_percent": 1.6876809206061283, "speedup": 1.0171665253796243, "status": "improved", "higher_is_better": false, "baseline_vm": "OpenJDK 64-Bit Server VM", "treatment_vm": "OpenJDK 64-Bit Server VM", "baseline_jdk": "", "treatment_jdk": "", "statistical_significance": {"is_significant": false, "confidence_level": "p \u2265 0.05", "t_statistic": 0.012090252183102846, "insufficient_data": false}, "baseline_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [-25.41122511243458, 486.5408086124346], "secondary_metrics": {}, "params": {"tableType": "Unshredded"}, "raw_data": [[224.525042, 283.2345, 227.370875, 187.12875]], "all_samples": [224.525042, 283.2345, 227.370875, 187.12875]}, "treatment_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [31.58116161846405, 421.76602588153594], "secondary_metrics": {}, "params": {"tableType": "Unshredded"}, "raw_data": [[255.494125, 246.860959, 190.016291, 214.323]], "all_samples": [255.494125, 246.860959, 190.016291, 214.323]}, "display_name": "projectVarID"}, {"benchmark": "org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.projectVarID", "mode": "ss", "threads": 1, "baseline_score": 392.87904175000006, "baseline_error": 1100.7717945177299, "treatment_score": 260.33762499999995, "treatment_error": 535.5365814551747, "unit": "ms/op", "improvement_percent": 33.73593464279011, "speedup": 1.5091135664696953, "status": "improved", "higher_is_better": false, "baseline_vm": "OpenJDK 64-Bit Server VM", "treatment_vm": "OpenJDK 64-Bit Server VM", "baseline_jdk": "", "treatment_jdk": "", "statistical_significance": {"is_significant": false, "confidence_level": "p \u2265 0.05", "t_statistic": 0.10827383723632066, "insufficient_data": false}, "baseline_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [-707.8927527677298, 1493.65083626773], "secondary_metrics": {}, "params": {"tableType": "Avro"}, "raw_data": [[541.653208, 538.627458, 233.272792, 257.962709]], "all_samples": [541.653208, 538.627458, 233.272792, 257.962709]}, "treatment_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [-275.1989564551747, 795.8742064551745], "secondary_metrics": {}, "params": {"tableType": "Avro"}, "raw_data": [[223.577583, 383.459958, 230.667667, 203.645292]], "all_samples": [223.577583, 383.459958, 230.667667, 203.645292]}, "display_name": "projectVarID"}, {"benchmark": "org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.count", "mode": "ss", "threads": 1, "baseline_score": 412.16834400000005, "baseline_error": 475.9130418144434, "treatment_score": 247.39123975, "treatment_error": 253.6962185439296, "unit": "ms/op", "improvement_percent": 39.97810764671438, "speedup": 1.6660587675477705, "status": "improved", "higher_is_better": false, "baseline_vm": "OpenJDK 64-Bit Server VM", "treatment_vm": "OpenJDK 64-Bit Server VM", "baseline_jdk": "", "treatment_jdk": "", "statistical_significance": {"is_significant": false, "confidence_level": "p \u2265 0.05", "t_statistic": 0.3055333369825349, "insufficient_data": false}, "baseline_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [-63.74469781444333, 888.0813858144434], "secondary_metrics": {}, "params": {"tableType": "Avro"}, "raw_data": [[324.846167, 394.338834, 502.164917, 427.323458]], "all_samples": [324.846167, 394.338834, 502.164917, 427.323458]}, "treatment_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [-6.3049787939295925, 501.0874582939296], "secondary_metrics": {}, "params": {"tableType": "Avro"}, "raw_data": [[288.261375, 273.660334, 216.025875, 211.617375]], "all_samples": [288.261375, 273.660334, 216.025875, 211.617375]}, "display_name": "count"}, {"benchmark": "org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.filterCatProjectVarID", "mode": "ss", "threads": 1, "baseline_score": 422.04094824999993, "baseline_error": 1059.0283491643308, "treatment_score": 418.625094, "treatment_error": 975.5353838113554, "unit": "ms/op", "improvement_percent": 0.8093655992774722, "speedup": 1.008159697779608, "status": "improved", "higher_is_better": false, "baseline_vm": "OpenJDK 64-Bit Server VM", "treatment_vm": "OpenJDK 64-Bit Server VM", "baseline_jdk": "", "treatment_jdk": "", "statistical_significance": {"is_significant": false, "confidence_level": "p \u2265 0.05", "t_statistic": 0.002372343922672995, "insufficient_data": false}, "baseline_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [-636.9874009143309, 1481.0692974143308], "secondary_metrics": {}, "params": {"tableType": "Unshredded"}, "raw_data": [[657.18675, 406.896084, 291.394, 332.686959]], "all_samples": [657.18675, 406.896084, 291.394, 332.686959]}, "treatment_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [-556.9102898113554, 1394.1604778113553], "secondary_metrics": {}, "params": {"tableType": "Unshredded"}, "raw_data": [[638.72675, 363.762834, 295.602292, 376.4085]], "all_samples": [638.72675, 363.762834, 295.602292, 376.4085]}, "display_name": "filterCatProjectVarID"}, {"benchmark": "org.apache.iceberg.parquet.IcebergSourceVariantIOBenchmark.count", "mode": "ss", "threads": 1, "baseline_score": 242.14087525000002, "baseline_error": 213.87589291616914, "treatment_score": 290.532844, "treatment_error": 227.26859052078268, "unit": "ms/op", "improvement_percent": -19.985047423338735, "speedup": 0.8334371836115025, "status": "regressed", "higher_is_better": false, "baseline_vm": "OpenJDK 64-Bit Server VM", "treatment_vm": "OpenJDK 64-Bit Server VM", "baseline_jdk": "", "treatment_jdk": "", "statistical_significance": {"is_significant": false, "confidence_level": "p \u2265 0.05", "t_statistic": 0.15506271748277095, "insufficient_data": false}, "baseline_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [28.264982333830886, 456.0167681661692], "secondary_metrics": {}, "params": {"tableType": "Shredded"}, "raw_data": [[283.582959, 243.686292, 202.723084, 238.571166]], "all_samples": [283.582959, 243.686292, 202.723084, 238.571166]}, "treatment_details": {"jvm": "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home/bin/java", "jvm_args": ["-Xmx32g"], "jdk": "", "vm_name": "OpenJDK 64-Bit Server VM", "vm_version": "17.0.17+10-LTS", "forks": 1, "warmup_iterations": 4, "warmup_time": "single-shot", "measurement_iterations": 4, "measurement_time": "single-shot", "score_confidence": [63.26425347921733, 517.8014345207827], "secondary_metrics": {}, "params": {"tableType": "Shredded"}, "raw_data": [[338.557375, 280.724125, 254.424792, 288.425084]], "all_samples": [338.557375, 280.724125, 254.424792, 288.425084]}, "display_name": "count"}];
+        let filteredData = [...originalData];
+        let currentSort = {column: -1, direction: 'asc'};
+        let experimentDetails = null;
+        
+        function filterTable() {
+            const benchmarkFilter = document.getElementById('benchmarkFilter').value.toLowerCase();
+            const statusFilter = document.getElementById('statusFilter').value;
+            const modeFilter = document.getElementById('modeFilter').value;
+            const significanceFilter = document.getElementById('significanceFilter').value;
+            
+            filteredData = originalData.filter(row => {
+                const matchesBenchmark = row.benchmark.toLowerCase().includes(benchmarkFilter);
+                const matchesStatus = !statusFilter || row.status === statusFilter;
+                const matchesMode = !modeFilter || row.mode === modeFilter;
+                const matchesSignificance = !significanceFilter || 
+                    (significanceFilter === 'significant' && row.statistical_significance.is_significant) ||
+                    (significanceFilter === 'not_significant' && !row.statistical_significance.is_significant) ||
+                    (significanceFilter === 'insufficient_data' && row.statistical_significance.insufficient_data);
+                
+                return matchesBenchmark && matchesStatus && matchesMode && matchesSignificance;
+            });
+            
+            updateTable();
+            updateFilteredStats();
+        }
+        
+        function updateTable() {
+            const tbody = document.getElementById('benchmarkTableBody');
+            tbody.innerHTML = '';
+            
+            filteredData.forEach((data, index) => {
+                const statusClass = `status-${data.status}`;
+                
+                // Handle insufficient data case
+                let significanceDisplay;
+                if (data.statistical_significance.insufficient_data) {
+                    significanceDisplay = '?';
+                } else {
+                    significanceDisplay = data.statistical_significance.is_significant ? 'Yes' : 'No';
+                }
+                
+                // Format parameters for display (values only, separated by commas)
+                const params = data.baseline_details.params || {};
+                let paramsDisplay = "—";
+                if (Object.keys(params).length > 0) {
+                    paramsDisplay = Object.values(params).join(', ');
+                    if (paramsDisplay.length > 30) {
+                        paramsDisplay = paramsDisplay.substring(0, 27) + "...";
+                    }
+                }
+                const paramsTitle = Object.keys(params).length > 0 ? 
+                    Object.entries(params).map(([k, v]) => `${k}=${v}`).join(', ') : 
+                    "No parameters";
+                
+                const row = document.createElement('tr');
+                row.onclick = () => showBenchmarkDetails(data);
+                row.innerHTML = `
+                    <td class="benchmark-name" title="${data.benchmark}">${data.display_name || data.benchmark}</td>
+                    <td class="number">${data.baseline_score.toFixed(4)} ± ${data.baseline_error.toFixed(4)}</td>
+                    <td class="number">${data.treatment_score.toFixed(4)} ± ${data.treatment_error.toFixed(4)}</td>
+                    <td style="text-align: center;">${data.mode}</td>
+                    <td style="text-align: center;">${data.unit}</td>
+                    <td style="text-align: center; font-size: 11px;" title="${paramsTitle}">${paramsDisplay}</td>
+                    <td class="number ${statusClass}" style="text-align: center;">${data.speedup.toFixed(2)}x</td>
+                    <td style="text-align: center;">${significanceDisplay}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+        
+        function updateFilteredStats() {
+            if (filteredData.length === 0) {
+                document.getElementById('filteredStats').innerHTML = '<strong>No data matches current filters</strong>';
+                document.getElementById('summaryTitle').textContent = 'Summary Statistics';
+                return;
+            }
+            
+            const improvements = filteredData.map(d => d.improvement_percent);
+            const speedups = filteredData.map(d => d.speedup);
+            
+            const avgImprovement = improvements.reduce((a, b) => a + b, 0) / improvements.length;
+            const medianImprovement = improvements.slice().sort((a, b) => a - b)[Math.floor(improvements.length / 2)];
+            const avgSpeedup = speedups.reduce((a, b) => a + b, 0) / speedups.length;
+            const medianSpeedup = speedups.slice().sort((a, b) => a - b)[Math.floor(speedups.length / 2)];
+            
+            const improvedCount = filteredData.filter(d => d.status === 'improved').length;
+            const regressedCount = filteredData.filter(d => d.status === 'regressed').length;
+            const unchangedCount = filteredData.filter(d => d.status === 'unchanged').length;
+            
+            // Update summary statistics if filtered
+            if (filteredData.length < originalData.length) {
+                document.getElementById('summaryTitle').textContent = 'Summary Statistics (Filtered)';
+                document.getElementById('summaryStats').innerHTML = `
+                    <div class="stat-card">
+                        <div class="stat-value">${filteredData.length}</div>
+                        <div class="stat-label">Total Benchmarks</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${improvedCount}</div>
+                        <div class="stat-label">Improved</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${regressedCount}</div>
+                        <div class="stat-label">Regressed</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${avgSpeedup.toFixed(2)}x</div>
+                        <div class="stat-label">Avg Speedup</div>
+                    </div>
+                `;
+            } else {
+                document.getElementById('summaryTitle').textContent = 'Summary Statistics';
+                // Reset to original values
+                document.getElementById('summaryStats').innerHTML = `
+                    <div class="stat-card">
+                        <div class="stat-value">45</div>
+                        <div class="stat-label">Total Benchmarks</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">19</div>
+                        <div class="stat-label">Improved</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">26</div>
+                        <div class="stat-label">Regressed</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">1.02x</div>
+                        <div class="stat-label">Avg Speedup</div>
+                    </div>
+                `;
+            }
+            
+            document.getElementById('filteredStats').innerHTML = `
+                <strong>Filtered Results:</strong> 
+                ${filteredData.length} benchmarks | 
+                ${improvedCount} improved | 
+                ${regressedCount} regressed | 
+                ${unchangedCount} unchanged | 
+                Avg: ${avgImprovement.toFixed(2)}% | 
+                Median: ${medianImprovement.toFixed(2)}% | 
+                Avg Speedup: ${avgSpeedup.toFixed(2)}x
+            `;
+        }
+        
+        function sortTable(columnIndex) {
+            const headers = document.querySelectorAll('th');
+            
+            // Remove existing sort classes
+            headers.forEach(header => {
+                header.classList.remove('sorted-asc', 'sorted-desc');
+            });
+            
+            // Determine sort direction
+            const direction = (currentSort.column === columnIndex && currentSort.direction === 'asc') ? 'desc' : 'asc';
+            currentSort = {column: columnIndex, direction: direction};
+            
+            // Add sort class to current header
+            headers[columnIndex].classList.add(direction === 'asc' ? 'sorted-asc' : 'sorted-desc');
+            
+            // Sort the data
+            filteredData.sort((a, b) => {
+                let aVal, bVal;
+                
+                switch(columnIndex) {
+                    case 0: 
+                        // For benchmark name, include parameters in sort key for logical grouping
+                        const aParamsForSort = a.baseline_details.params || {};
+                        const bParamsForSort = b.baseline_details.params || {};
+                        const aParamStr = Object.keys(aParamsForSort).length > 0 ? Object.values(aParamsForSort).join(',') : "";
+                        const bParamStr = Object.keys(bParamsForSort).length > 0 ? Object.values(bParamsForSort).join(',') : "";
+                        aVal = a.benchmark + (aParamStr ? `_${aParamStr}` : "");
+                        bVal = b.benchmark + (bParamStr ? `_${bParamStr}` : "");
+                        break;
+                    case 1: aVal = a.baseline_score; bVal = b.baseline_score; break;
+                    case 2: aVal = a.treatment_score; bVal = b.treatment_score; break;
+                    case 3: aVal = a.mode; bVal = b.mode; break;
+                    case 4: aVal = a.unit; bVal = b.unit; break;
+                    case 5: 
+                        // For params, use string representation for sorting
+                        const aParams = a.baseline_details.params || {};
+                        const bParams = b.baseline_details.params || {};
+                        aVal = Object.keys(aParams).length > 0 ? Object.entries(aParams).map(([k, v]) => `${k}=${v}`).join(', ') : "";
+                        bVal = Object.keys(bParams).length > 0 ? Object.entries(bParams).map(([k, v]) => `${k}=${v}`).join(', ') : "";
+                        break;
+                    case 6: aVal = a.speedup; bVal = b.speedup; break;
+                    case 7: aVal = a.statistical_significance.is_significant; bVal = b.statistical_significance.is_significant; break;
+                    default: return 0;
+                }
+                
+                if (typeof aVal === 'number' && typeof bVal === 'number') {
+                    return direction === 'asc' ? aVal - bVal : bVal - aVal;
+                } else if (typeof aVal === 'boolean' && typeof bVal === 'boolean') {
+                    return direction === 'asc' ? (aVal ? 1 : 0) - (bVal ? 1 : 0) : (bVal ? 1 : 0) - (aVal ? 1 : 0);
+                } else {
+                    const comparison = String(aVal).localeCompare(String(bVal));
+                    return direction === 'asc' ? comparison : -comparison;
+                }
+            });
+            
+            updateTable();
+        }
+        
+        function resetFilters() {
+            document.getElementById('benchmarkFilter').value = '';
+            document.getElementById('statusFilter').value = '';
+            document.getElementById('modeFilter').value = '';
+            document.getElementById('significanceFilter').value = '';
+            filteredData = [...originalData];
+            updateTable();
+            updateFilteredStats();
+        }
+        
+        function exportFilteredData() {
+            const csvContent = [
+                ['Benchmark', 'Mode', 'Threads', 'Baseline Score', 'Treatment Score', 'Unit', 'Improvement %', 'Speedup', 'Status'],
+                ...filteredData.map(d => [
+                    d.benchmark, d.mode, d.threads, d.baseline_score, d.treatment_score, 
+                    d.unit, d.improvement_percent, d.speedup, d.status
+                ])
+            ].map(row => row.join(',')).join('\n');
+            
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'filtered_benchmark_results.csv';
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+        
+        function showExperimentDetails() {
+            if (!experimentDetails) {
+                alert('No experiment details available');
+                return;
+            }
+            
+            const modal = document.getElementById('experimentModal');
+            const modalBody = document.getElementById('experimentModalBody');
+            
+            let detailsHtml = '<div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; border-left: 4px solid #007bff;">';
+            
+            Object.entries(experimentDetails).forEach(([key, value], index) => {
+                if (index > 0) {
+                    detailsHtml += '<hr style="margin: 20px 0; border: none; border-top: 1px solid #dee2e6;">';
+                }
+                detailsHtml += `
+                    <div style="margin-bottom: 15px;">
+                        <h4 style="color: #007bff; margin: 0 0 10px 0; font-size: 16px;">${key}</h4>
+                        <div style="background-color: white; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 12px; white-space: pre-wrap; word-break: break-all; max-height: 200px; overflow-y: auto;">${value.replace(/\n/g, '<br>')}</div>
+                    </div>
+                `;
+            });
+            
+            detailsHtml += '</div>';
+            modalBody.innerHTML = detailsHtml;
+            modal.style.display = 'block';
+        }
+        
+        function closeExperimentModal() {
+            document.getElementById('experimentModal').style.display = 'none';
+        }
+        
+        function showBenchmarkDetails(data) {
+            // Implementation for benchmark details modal
+            const modal = document.getElementById('detailModal');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalBody = document.getElementById('modalBody');
+            
+            modalTitle.textContent = data.benchmark;
+            
+            const statusClass = `status-${data.status}`;
+            
+            // Handle insufficient data case for significance display
+            let significanceClass, significanceText;
+            if (data.statistical_significance.insufficient_data) {
+                significanceClass = 'significance-no';
+                significanceText = '?';
+            } else {
+                significanceClass = data.statistical_significance.is_significant ? 'significance-yes' : 'significance-no';
+                significanceText = data.statistical_significance.is_significant ? 'Yes' : 'No';
+            }
+            
+            // Helper function to format params for display
+            function formatParams(params) {
+                if (!params || Object.keys(params).length === 0) {
+                    return '<em>None</em>';
+                }
+                return Object.entries(params).map(([key, value]) => 
+                    `<span style="background-color: #e9ecef; padding: 2px 6px; border-radius: 3px; font-family: monospace; margin: 2px;">${key}=${value}</span>`
+                ).join(' ');
+            }
+            
+            modalBody.innerHTML = `
+                <div class="comparison-section">
+                    <h3>Performance Comparison</h3>
+                    <div class="metric-comparison">
+                        <div class="metric-box">
+                            <div class="metric-value">${data.baseline_score.toFixed(4)}</div>
+                            <div class="metric-error">± ${data.baseline_error.toFixed(4)}</div>
+                            <div class="metric-label">Baseline (${data.baseline_vm})</div>
+                        </div>
+                        <div class="metric-arrow">→</div>
+                        <div class="metric-box">
+                            <div class="metric-value">${data.treatment_score.toFixed(4)}</div>
+                            <div class="metric-error">± ${data.treatment_error.toFixed(4)}</div>
+                            <div class="metric-label">Treatment (${data.treatment_vm})</div>
+                        </div>
+                    </div>
+                    <div style="text-align: center; margin: 15px 0;">
+                        <strong>Unit:</strong> ${data.unit} | 
+                        <strong class="${statusClass}">Improvement:</strong> <span class="${statusClass}">${data.improvement_percent.toFixed(2)}%</span> | 
+                        <strong class="${statusClass}">Speedup:</strong> <span class="${statusClass}">${data.speedup.toFixed(2)}x</span>
+                    </div>
+                    <div style="text-align: center;">
+                        <strong>Statistical Significance:</strong> 
+                        <span class="significance-badge ${significanceClass}">${significanceText}</span>
+                        <span style="margin-left: 10px;">(${data.statistical_significance.confidence_level})</span>
+                    </div>
+                </div>
+                
+                <div class="detail-section" style="margin-bottom: 20px;">
+                    <h3>Benchmark Parameters</h3>
+                    <div class="detail-row">
+                        <div class="detail-label">Baseline Params:</div>
+                        <div class="detail-value">${formatParams(data.baseline_details.params)}</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Treatment Params:</div>
+                        <div class="detail-value">${formatParams(data.treatment_details.params)}</div>
+                    </div>
+                </div>
+                
+                <div class="detail-grid">
+                    <div class="detail-section">
+                        <h3>Baseline Details</h3>
+                        <div class="detail-row">
+                            <div class="detail-label">JDK:</div>
+                            <div class="detail-value">${data.baseline_details.jdk}</div>
+                        </div>
+                        <div class="detail-row">
+                            <div class="detail-label">VM:</div>
+                            <div class="detail-value">${data.baseline_details.vm_name}</div>
+                        </div>
+                        <div class="detail-row">
+                            <div class="detail-label">VM Version:</div>
+                            <div class="detail-value">${data.baseline_details.vm_version}</div>
+                        </div>
+                        <div class="detail-row">
+                            <div class="detail-label">Forks:</div>
+                            <div class="detail-value">${data.baseline_details.forks}</div>
+                        </div>
+                        <div class="detail-row">
+                            <div class="detail-label">Warmup:</div>
+                            <div class="detail-value">${data.baseline_details.warmup_iterations} × ${data.baseline_details.warmup_time}</div>
+                        </div>
+                        <div class="detail-row">
+                            <div class="detail-label">Measurement:</div>
+                            <div class="detail-value">${data.baseline_details.measurement_iterations} × ${data.baseline_details.measurement_time}</div>
+                        </div>
+                        ${data.baseline_details.jvm_args && data.baseline_details.jvm_args.length > 0 ? `
+                        <div class="detail-row">
+                            <div class="detail-label">JVM Args:</div>
+                            <div class="jvm-args">${data.baseline_details.jvm_args.join('\n')}</div>
+                        </div>
+                        ` : ''}
+                    </div>
+                    
+                    <div class="detail-section">
+                        <h3>Treatment Details</h3>
+                        <div class="detail-row">
+                            <div class="detail-label">JDK:</div>
+                            <div class="detail-value">${data.treatment_details.jdk}</div>
+                        </div>
+                        <div class="detail-row">
+                            <div class="detail-label">VM:</div>
+                            <div class="detail-value">${data.treatment_details.vm_name}</div>
+                        </div>
+                        <div class="detail-row">
+                            <div class="detail-label">VM Version:</div>
+                            <div class="detail-value">${data.treatment_details.vm_version}</div>
+                        </div>
+                        <div class="detail-row">
+                            <div class="detail-label">Forks:</div>
+                            <div class="detail-value">${data.treatment_details.forks}</div>
+                        </div>
+                        <div class="detail-row">
+                            <div class="detail-label">Warmup:</div>
+                            <div class="detail-value">${data.treatment_details.warmup_iterations} × ${data.treatment_details.warmup_time}</div>
+                        </div>
+                        <div class="detail-row">
+                            <div class="detail-label">Measurement:</div>
+                            <div class="detail-value">${data.treatment_details.measurement_iterations} × ${data.treatment_details.measurement_time}</div>
+                        </div>
+                        ${data.treatment_details.jvm_args && data.treatment_details.jvm_args.length > 0 ? `
+                        <div class="detail-row">
+                            <div class="detail-label">JVM Args:</div>
+                            <div class="jvm-args">${data.treatment_details.jvm_args.join('\n')}</div>
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
+                
+                ${Object.keys(data.baseline_details.secondary_metrics).length > 0 || Object.keys(data.treatment_details.secondary_metrics).length > 0 ? `
+                <div class="secondary-metrics">
+                    <h4>Secondary Metrics</h4>
+                    ${Object.keys(data.baseline_details.secondary_metrics).length > 0 ? `
+                        <strong>Baseline:</strong><br>
+                        ${Object.entries(data.baseline_details.secondary_metrics).map(([name, metric]) => 
+                            `${name}: ${metric.score?.toFixed(4) || 'N/A'} ± ${metric.scoreError?.toFixed(4) || 'N/A'} ${metric.scoreUnit || ''}`
+                        ).join('<br>')}
+                        <br><br>
+                    ` : ''}
+                    ${Object.keys(data.treatment_details.secondary_metrics).length > 0 ? `
+                        <strong>Treatment:</strong><br>
+                        ${Object.entries(data.treatment_details.secondary_metrics).map(([name, metric]) => 
+                            `${name}: ${metric.score?.toFixed(4) || 'N/A'} ± ${metric.scoreError?.toFixed(4) || 'N/A'} ${metric.scoreUnit || ''}`
+                        ).join('<br>')}
+                    ` : ''}
+                </div>
+                ` : ''}
+                
+                ${(data.baseline_details.all_samples && data.baseline_details.all_samples.length > 0) || 
+                  (data.treatment_details.all_samples && data.treatment_details.all_samples.length > 0) ? `
+                <div class="detail-section" style="margin-top: 20px;">
+                    <h3>📊 Iteration Results Distribution</h3>
+                    <p style="color: #6c757d; font-size: 14px; margin-bottom: 15px;">
+                        Violin plots showing the distribution of measurement iteration results. This helps visualize 
+                        the variability and shape of the performance distributions.
+                    </p>
+                    <div id="violinPlotContainer" style="text-align: center; background-color: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px;">
+                        <!-- Violin plot will be generated here -->
+                    </div>
+                </div>
+                ` : ''}
+            `;
+            
+            // Generate violin plot if raw data is available
+            setTimeout(() => {
+                generateViolinPlot(data);
+            }, 100);
+            
+            modal.style.display = 'block';
+        }
+        
+        function generateViolinPlot(data) {
+            const container = document.getElementById('violinPlotContainer');
+            if (!container) return;
+            
+            const baselineSamples = data.baseline_details.all_samples || [];
+            const treatmentSamples = data.treatment_details.all_samples || [];
+            
+            if (baselineSamples.length === 0 && treatmentSamples.length === 0) {
+                container.innerHTML = '<p style="color: #6c757d;">No raw iteration data available for violin plot visualization.</p>';
+                return;
+            }
+            
+            // Calculate violin plot data
+            function calculateKernelDensity(samples, bandwidth) {
+                if (samples.length === 0) return [];
+                
+                const min = Math.min(...samples);
+                const max = Math.max(...samples);
+                const range = max - min;
+                const step = range / 100;
+                const points = [];
+                
+                for (let x = min - range * 0.1; x <= max + range * 0.1; x += step) {
+                    let density = 0;
+                    for (const sample of samples) {
+                        const diff = (x - sample) / bandwidth;
+                        density += Math.exp(-0.5 * diff * diff);
+                    }
+                    density /= (samples.length * bandwidth * Math.sqrt(2 * Math.PI));
+                    points.push({x: x, density: density});
+                }
+                return points;
+            }
+            
+            // Calculate bandwidth using Silverman's rule of thumb
+            function calculateBandwidth(samples) {
+                if (samples.length === 0) return 1;
+                const std = Math.sqrt(samples.reduce((sum, x) => sum + Math.pow(x - samples.reduce((a, b) => a + b, 0) / samples.length, 2), 0) / samples.length);
+                return 1.06 * std * Math.pow(samples.length, -1/5);
+            }
+            
+            const baselineBandwidth = calculateBandwidth(baselineSamples);
+            const treatmentBandwidth = calculateBandwidth(treatmentSamples);
+            
+            const baselineKDE = calculateKernelDensity(baselineSamples, baselineBandwidth);
+            const treatmentKDE = calculateKernelDensity(treatmentSamples, treatmentBandwidth);
+            
+            // Chart dimensions
+            const width = 500;
+            const height = 300;
+            const margin = {top: 20, right: 20, bottom: 60, left: 60};
+            const chartWidth = width - margin.left - margin.right;
+            const chartHeight = height - margin.top - margin.bottom;
+            
+            // Calculate scales
+            const allSamples = [...baselineSamples, ...treatmentSamples];
+            const minValue = Math.min(...allSamples);
+            const maxValue = Math.max(...allSamples);
+            const valueRange = maxValue - minValue;
+            
+            const maxDensity = Math.max(
+                ...baselineKDE.map(d => d.density),
+                ...treatmentKDE.map(d => d.density)
+            );
+            
+            const yScale = chartHeight / (valueRange * 1.2);
+            const densityScale = Math.min((chartWidth * 0.25) / maxDensity, chartWidth * 0.15);  // Limit violin width to prevent margin overflow
+            
+            // Create SVG
+            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            svg.setAttribute('width', width);
+            svg.setAttribute('height', height);
+            svg.style.backgroundColor = 'white';
+            
+            // Draw background
+            const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            bg.setAttribute('width', width);
+            bg.setAttribute('height', height);
+            bg.setAttribute('fill', 'white');
+            svg.appendChild(bg);
+            
+            // Calculate violin centers - spread them further apart to prevent overlap
+            const baselineCenter = margin.left + chartWidth * 0.2;
+            const treatmentCenter = margin.left + chartWidth * 0.8;
+            
+            // Draw violin shapes
+            function drawViolin(kde, samples, centerX, color, label) {
+                if (samples.length === 0) return;
+                
+                // Calculate violin path
+                let pathData = `M ${centerX} ${margin.top + chartHeight}`;
+                
+                // Right side of violin (positive density)
+                kde.forEach(point => {
+                    const y = margin.top + chartHeight - (point.x - minValue + valueRange * 0.1) * yScale;
+                    const x = centerX + point.density * densityScale;
+                    pathData += ` L ${x} ${y}`;
+                });
+                
+                // Top curve
+                pathData += ` L ${centerX} ${margin.top}`;
+                
+                // Left side of violin (negative density)
+                kde.slice().reverse().forEach(point => {
+                    const y = margin.top + chartHeight - (point.x - minValue + valueRange * 0.1) * yScale;
+                    const x = centerX - point.density * densityScale;
+                    pathData += ` L ${x} ${y}`;
+                });
+                
+                pathData += ' Z';
+                
+                // Draw violin shape
+                const violinPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                violinPath.setAttribute('d', pathData);
+                violinPath.setAttribute('fill', color);
+                violinPath.setAttribute('fill-opacity', '0.6');
+                violinPath.setAttribute('stroke', color);
+                violinPath.setAttribute('stroke-width', '1.5');
+                svg.appendChild(violinPath);
+                
+                // Draw median line
+                const median = samples.slice().sort((a, b) => a - b)[Math.floor(samples.length / 2)];
+                const medianY = margin.top + chartHeight - (median - minValue + valueRange * 0.1) * yScale;
+                
+                const medianLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                medianLine.setAttribute('x1', centerX - 15);
+                medianLine.setAttribute('y1', medianY);
+                medianLine.setAttribute('x2', centerX + 15);
+                medianLine.setAttribute('y2', medianY);
+                medianLine.setAttribute('stroke', '#2c3e50');
+                medianLine.setAttribute('stroke-width', '2');
+                svg.appendChild(medianLine);
+                
+                // Draw sample dots (if not too many)
+                if (samples.length <= 100) {
+                    samples.forEach((sample, i) => {
+                        const y = margin.top + chartHeight - (sample - minValue + valueRange * 0.1) * yScale;
+                        const jitter = (Math.random() - 0.5) * 20; // Add some horizontal jitter
+                        const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                        dot.setAttribute('cx', centerX + jitter);
+                        dot.setAttribute('cy', y);
+                        dot.setAttribute('r', '2');
+                        dot.setAttribute('fill', color);
+                        dot.setAttribute('fill-opacity', '0.4');
+                        svg.appendChild(dot);
+                    });
+                }
+                
+                // Label
+                const labelText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                labelText.setAttribute('x', centerX);
+                labelText.setAttribute('y', height - 10);
+                labelText.setAttribute('text-anchor', 'middle');
+                labelText.setAttribute('font-size', '12');
+                labelText.setAttribute('font-weight', 'bold');
+                labelText.setAttribute('fill', color);
+                labelText.textContent = `${label} (n=${samples.length})`;
+                svg.appendChild(labelText);
+            }
+            
+            // Draw Y-axis
+            const yAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            yAxis.setAttribute('x1', margin.left);
+            yAxis.setAttribute('y1', margin.top);
+            yAxis.setAttribute('x2', margin.left);
+            yAxis.setAttribute('y2', margin.top + chartHeight);
+            yAxis.setAttribute('stroke', '#333');
+            yAxis.setAttribute('stroke-width', '1');
+            svg.appendChild(yAxis);
+            
+            // Draw Y-axis ticks and labels
+            const numTicks = 5;
+            for (let i = 0; i <= numTicks; i++) {
+                const value = minValue + (valueRange * i / numTicks);
+                const y = margin.top + chartHeight - (value - minValue + valueRange * 0.1) * yScale;
+                
+                // Tick line
+                const tick = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                tick.setAttribute('x1', margin.left - 5);
+                tick.setAttribute('y1', y);
+                tick.setAttribute('x2', margin.left);
+                tick.setAttribute('y2', y);
+                tick.setAttribute('stroke', '#333');
+                svg.appendChild(tick);
+                
+                // Label
+                const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                label.setAttribute('x', margin.left - 10);
+                label.setAttribute('y', y + 4);
+                label.setAttribute('text-anchor', 'end');
+                label.setAttribute('font-size', '10');
+                label.setAttribute('fill', '#666');
+                label.textContent = value.toFixed(2);
+                svg.appendChild(label);
+                
+                // Grid line
+                const grid = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                grid.setAttribute('x1', margin.left);
+                grid.setAttribute('y1', y);
+                grid.setAttribute('x2', margin.left + chartWidth);
+                grid.setAttribute('y2', y);
+                grid.setAttribute('stroke', '#eee');
+                grid.setAttribute('stroke-width', '0.5');
+                svg.appendChild(grid);
+            }
+            
+            // Draw violins
+            if (baselineSamples.length > 0) {
+                drawViolin(baselineKDE, baselineSamples, baselineCenter, '#4a90e2', 'Baseline');
+            }
+            if (treatmentSamples.length > 0) {
+                drawViolin(treatmentKDE, treatmentSamples, treatmentCenter, '#f5a623', 'Treatment');
+            }
+            
+            // Y-axis title - position further left to avoid overlap with axis labels
+            const yTitle = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            yTitle.setAttribute('x', 15);
+            yTitle.setAttribute('y', height / 2);
+            yTitle.setAttribute('text-anchor', 'middle');
+            yTitle.setAttribute('font-size', '11');
+            yTitle.setAttribute('fill', '#333');
+            yTitle.setAttribute('transform', `rotate(-90, 15, ${height / 2})`);
+            yTitle.textContent = `Performance (${data.unit})`;
+            svg.appendChild(yTitle);
+            
+            // Title
+            const title = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            title.setAttribute('x', width / 2);
+            title.setAttribute('y', 15);
+            title.setAttribute('text-anchor', 'middle');
+            title.setAttribute('font-size', '14');
+            title.setAttribute('font-weight', 'bold');
+            title.setAttribute('fill', '#333');
+            title.textContent = 'Distribution of Iteration Results';
+            svg.appendChild(title);
+            
+            // Clear container and add SVG
+            container.innerHTML = '';
+            container.appendChild(svg);
+            
+            // Add summary statistics
+            const stats = document.createElement('div');
+            stats.style.marginTop = '10px';
+            stats.style.fontSize = '12px';
+            stats.style.color = '#666';
+            stats.innerHTML = `
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 10px;">
+                    <div>
+                        <strong>Baseline Stats:</strong><br>
+                        Mean: ${baselineSamples.length > 0 ? (baselineSamples.reduce((a, b) => a + b, 0) / baselineSamples.length).toFixed(4) : 'N/A'}<br>
+                        Median: ${baselineSamples.length > 0 ? baselineSamples.slice().sort((a, b) => a - b)[Math.floor(baselineSamples.length / 2)].toFixed(4) : 'N/A'}<br>
+                        Std Dev: ${baselineSamples.length > 0 ? Math.sqrt(baselineSamples.reduce((sum, x) => sum + Math.pow(x - baselineSamples.reduce((a, b) => a + b, 0) / baselineSamples.length, 2), 0) / baselineSamples.length).toFixed(4) : 'N/A'}
+                    </div>
+                    <div>
+                        <strong>Treatment Stats:</strong><br>
+                        Mean: ${treatmentSamples.length > 0 ? (treatmentSamples.reduce((a, b) => a + b, 0) / treatmentSamples.length).toFixed(4) : 'N/A'}<br>
+                        Median: ${treatmentSamples.length > 0 ? treatmentSamples.slice().sort((a, b) => a - b)[Math.floor(treatmentSamples.length / 2)].toFixed(4) : 'N/A'}<br>
+                        Std Dev: ${treatmentSamples.length > 0 ? Math.sqrt(treatmentSamples.reduce((sum, x) => sum + Math.pow(x - treatmentSamples.reduce((a, b) => a + b, 0) / treatmentSamples.length, 2), 0) / treatmentSamples.length).toFixed(4) : 'N/A'}
+                    </div>
+                </div>
+            `;
+            container.appendChild(stats);
+        }
+        
+        function closeModal() {
+            document.getElementById('detailModal').style.display = 'none';
+        }
+        
+        function showBarChart() {
+            const modal = document.getElementById('chartModal');
+            modal.style.display = 'block';
+            const canvas = document.getElementById('benchmarkChart');
+            const ctx = canvas.getContext('2d');
+            
+            // Clear any existing chart
+            if (window.benchmarkChartInstance) {
+                window.benchmarkChartInstance.destroy();
+            }
+            
+            // Prepare data for the chart
+            const labels = filteredData.map(d => d.display_name || d.benchmark);
+            const speedups = filteredData.map(d => d.speedup);
+            const colors = filteredData.map(d => {
+                if (d.status === 'improved') return '#0066cc';  // Blue for improved (colorblind friendly)
+                if (d.status === 'regressed') return '#ff6600'; // Orange for regressed (colorblind friendly)
+                return '#6c757d';
+            });
+            
+            // Prepare confidence interval data for error bars with EPS to avoid /0
+            const EPS = 1e-12;
+            const errorBars = filteredData.map((d) => {
+                const baselineConf = d.baseline_details.score_confidence || [];
+                const treatmentConf = d.treatment_details.score_confidence || [];
+                
+                if (baselineConf.length === 2 && treatmentConf.length === 2) {
+                    const bLo = Math.max(baselineConf[0], EPS);
+                    const bHi = Math.max(baselineConf[1], EPS);
+                    const tLo = Math.max(treatmentConf[0], EPS);
+                    const tHi = Math.max(treatmentConf[1], EPS);
+                    
+                    let minSpeedup, maxSpeedup;
+                    if (d.higher_is_better) {
+                        // For throughput: speedup = treatment / baseline
+                        minSpeedup = tLo / bHi; // min treatment / max baseline
+                        maxSpeedup = tHi / bLo; // max treatment / min baseline
+                    } else {
+                        // For latency: speedup = baseline / treatment
+                        minSpeedup = bLo / tHi; // min baseline / max treatment
+                        maxSpeedup = bHi / tLo; // max baseline / min treatment
+                    }
+                    
+                    return {
+                        minus: Math.max(0, d.speedup - minSpeedup),
+                        plus:  Math.max(0, maxSpeedup - d.speedup)
+                    };
+                }
+                
+                // Fallback to using score errors if confidence intervals not available
+                const be = d.baseline_error;
+                const te = d.treatment_error;
+                
+                if (be > 0 && te > 0 && d.baseline_score > 0 && d.treatment_score > 0) {
+                    // Approximate error propagation for speedup calculation
+                    const relativeError = Math.sqrt(
+                        Math.pow(te / d.treatment_score, 2) + 
+                        Math.pow(be / d.baseline_score, 2)
+                    );
+                    const speedupError = d.speedup * relativeError;
+                    
+                    return { minus: speedupError, plus: speedupError };
+                }
+                
+                return { minus: 0, plus: 0 };
+            });
+            
+            // Define custom plugin to draw error bars (register at top-level, not options.plugins)
+            const errorBarsPlugin = {
+                id: 'errorBars',
+                afterDatasetsDraw(chart) {
+                    const ctx = chart.ctx;
+                    const meta = chart.getDatasetMeta(0);
+                    if (!meta || !meta.data) return;
+                    
+                    const yScale = chart.scales.y;
+                    ctx.save();
+                    ctx.strokeStyle = '#000';
+                    ctx.lineWidth = 1.5;
+                    ctx.fillStyle = '#000';
+                    
+                    meta.data.forEach((bar, index) => {
+                        const eb = errorBars[index];
+                        if (!eb || (eb.minus <= 0 && eb.plus <= 0)) return;
+                        
+                        const x = bar.x;
+                        const v = speedups[index];
+                        const yMin = yScale.getPixelForValue(Math.max(0, v - eb.minus));
+                        const yMax = yScale.getPixelForValue(v + eb.plus);
+                        const yCtr = yScale.getPixelForValue(v);
+                        
+                        // vertical line
+                        ctx.beginPath();
+                        ctx.moveTo(x, yMin);
+                        ctx.lineTo(x, yMax);
+                        ctx.stroke();
+                        
+                        // caps
+                        ctx.beginPath();
+                        ctx.moveTo(x - 8, yMin); ctx.lineTo(x + 8, yMin);
+                        ctx.moveTo(x - 8, yMax); ctx.lineTo(x + 8, yMax);
+                        ctx.stroke();
+                        
+                        // center point
+                        ctx.beginPath();
+                        ctx.arc(x, yCtr, 2, 0, Math.PI * 2);
+                        ctx.fill();
+                    });
+                    
+                    ctx.restore();
+                }
+            };
+            
+            // Create the chart with plugin properly registered
+            window.benchmarkChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Speedup Factor',
+                        data: speedups,
+                        backgroundColor: colors,
+                        borderColor: colors,
+                        borderWidth: 1
+                    }]
+                },
+                plugins: [errorBarsPlugin],
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Speedup Factor (x)'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Benchmarks'
+                            },
+                            ticks: {
+                                maxRotation: 45,
+                                minRotation: 45
+                            }
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Benchmark Performance Speedup (with Confidence Intervals)'
+                        },
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                afterLabel: function(context) {
+                                    const index = context.dataIndex;
+                                    const d = filteredData[index];
+                                    const eb = errorBars[index];
+                                    
+                                    const lines = [
+                                        `Mode: ${d.mode}`,
+                                        `Unit: ${d.unit}`,
+                                        `Improvement: ${d.improvement_percent.toFixed(2)}%`,
+                                        `Status: ${d.status}`
+                                    ];
+                                    
+                                    if (eb.minus > 0 || eb.plus > 0) {
+                                        lines.push(`Confidence: ${(d.speedup - eb.minus).toFixed(2)}x – ${(d.speedup + eb.plus).toFixed(2)}x`);
+                                    }
+                                    
+                                    return lines;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function closeChartModal() {
+            document.getElementById('chartModal').style.display = 'none';
+        }
+        
+        // Close modal when clicking outside of it
+        window.onclick = function(event) {
+            const detailModal = document.getElementById('detailModal');
+            const chartModal = document.getElementById('chartModal');
+            const experimentModal = document.getElementById('experimentModal');
+            if (event.target === detailModal) {
+                closeModal();
+            }
+            if (event.target === chartModal) {
+                closeChartModal();
+            }
+            if (event.target === experimentModal) {
+                closeExperimentModal();
+            }
+        }
+        
+        // Close modal with Escape key
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeModal();
+                closeChartModal();
+                closeExperimentModal();
+            }
+        });
+        
+        // Initialize
+        updateFilteredStats();
+        updateTable();
+    </script>
+</body>
+</html>
