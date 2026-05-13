@@ -42,6 +42,8 @@ Sorted numerically by project.
 This document only covers benchmarks from the two issues marked in italics: one in Iceberg and one in Parquet-java. 
 A full stack built with all PRs is expected to be faster, especially through file pushdown and use of the vectorized reader.
 
+For ongoing results there, see [experiments](./experiments). As of May 7 2026, there's no tangible benefit of a stack of spark and iceberg changes, which is still being debugged. 
+
 ## Related Work
 
 [_Preliminary Notes on Open-Source Variant Performance_](https://qlong.github.io/posts/2026-03-30-variant-early-results/),
