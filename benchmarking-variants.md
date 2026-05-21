@@ -18,13 +18,13 @@
    * Predicate pushdown all the way from Iceberg to the Parquet reader.
    * The causes of the "unexpected outcomes" in the benchmarking experiments to be identified and addressed.
      This could include identifying flaws in the benchmarks: review of those PRs is needed to give convidence in their conclusions.
-   * The Parquet-java variant support to borrow more from Iceberg.
+   * The parquet-java and iceberg variant support to get the best of both.
    * An Iceberg benchmark run with all the pending PRs merged to see what difference that makes. 
 
 At the time of the writing of the initial document (10-04-2026) the benchmark results impled that it was faster to perform filtering on variant data stored in Avro in Iceberg + Spark queries than it is on data stored in Parquet -and that shredded variants were the worst.
 
-By the end of may, we had enough rowgroup filtering to show that
-* Queries which generated no results were fast
+By the end of May, we had enough rowgroup filtering to show that:
+* Queries which generated no results were fast.
 * Queries which filtered on shredded fields were close to the speed of unshredded, though this required a careful
   design of the data and the queries to ensure many rowgroups were skipped.
 
@@ -268,7 +268,7 @@ protected Table initTable() {
 ```
 ## Queries
 
-Each benchmark measures the time to complete a single Spark SQL query against the current test table, all taking he form of a simple SELECT statement, statements such as
+Each benchmark measures the time to complete a single Spark SQL query against the current test table, all taking the form of a simple SELECT statement, statements such as
 
 ```sql
 SELECT variant_get(nested, '$.varid', 'int') FROM variant_table
@@ -322,18 +322,48 @@ These results are from a more complex codebase
 
 1. Spark 4.2-SNAPSHOT with Qiegang Long's patches for spark to push down `variant_get()` to iceberg
 2. The iceberg-side of that code
-3. [#16133](https://github.com/apache/iceberg/pull/16133) ParquetMetricsRowGroupFilter to filter variants
+3. [#16133](https://github.com/apache/iceberg/pull/16133) `ParquetMetricsRowGroupFilter` to filter variants
 
 The benchmark suite has been expanded to include many more cases, in particular set membership/non membership and SELECT calls where files are out of range. The size and layout of the test data has changed too, to force multiple rowgroups in a single file.
 Looking at timing differences between the two benchmarks is worthless.
 More significant is the avro/unshredded/shredded numbers on each test run.
 
 
+Getting results from this benchmark was very frustrating; ultimately `ParquetMetricsRowGroupFilter` had to be extended to add package-private counters of scans and skipping to provide _any_ evidence that filters were being evaluated.
+
+Once it was clear rowgroup skipping was taking place, a major dataset redesign was needed to trigger enough rowgroup skipping to make select queries on shredded fields faster than on unshredded data.
+
+* Single file
+* Many 1 MB rowgroups in the file.
+* Data generation to ensure only 1-2 categories per rowgroup.
+* Reduction in filter categories.
+* Addition of an array variant to explore performance of operations against it.
+  Shredding does not place with the array element, so nor can rowgroup or file filtering.
+  The benchmark assesses underlying performance.
+
+```
+id: long -> unique per row
+category: int32  (0-5)
+nested: variant
+    .idstr: string -> id as string
+    .varid: int64  -> id
+    .varcategory: int32 -> category (0-5)
+    .col4: string -> 5 values from category
+ arr: variant (array, always unshredded)
+     [0]: int32 :- category
+     [1]: int32 :- id % 20
+     [2]: int32 :- id % 100
+     [3]: int32 :- id % 50
+     [4]: int32 :- id % 1000
+```
+
+It's a very unnatural dataset --but it does at least show filtering of files and rowgroups work.
+
 ### Variance is high
 
 These results are from an overnight test run with 20 warm iterations and 20 execution iterations. That'll just have to be accepted and not blamed on user activities such as zoom calls at the same time. Assume garbage collection, spark scheduling or other possible causes.
 
-### Filtering to total exclusion is fast
+### Queries which filter all data are fastest.
 
 There are two queries which now show very significant speedup, to the extent that they are much faster than Avro queries.
 
@@ -341,8 +371,13 @@ There are two queries which now show very significant speedup, to the extent tha
 ![not-in-range](./images/2026-05-21-not-in-range.png)
 
 1. A set not-in-membership probe (`select id from table where variant_get(nested, '$.varcategory', 'int') IN (100, 400)` .
-1. Here there is no output, and only a single scan of the metrics.
+2. Here there is no output, and only a single scan of the metrics.
 A range scan with no results: `select id from table where variant_get(nested, '$.varcategory', 'int') < 0`
+
+Assertions on a counter field show that these queries not making any calls of the new filter, which implies that file-level statistics are being used
+to skip the file entirely.
+This is Qiegang Long's PR at work.
+No filtering of rowgroups within a file will be any faster than skipping the file entirely.
 
 ### Variant filtering can be slightly faster on shredded data against a tuned dataset
 
@@ -355,17 +390,15 @@ Qiegang Long says it is due to the entire variant being reconstructed, even only
 This behaviour means that when filtering on the shredded variant category field, once the metrics say a rowgroup must be scanned, every record is reconstructed before the single field is compared.
 For rowgroup skipping to show _any_ benefits, enough rowgroups need to be skipped that there is a measurable reduction in the number of records to be rebuilt.
 
-This explains why gettign results from benchmark was so frustrating; ultimately `ParquetMetricsRowGroupFilter` had to be extended to add package-private counters of scans and skipping to provide any evidence that filters were being evaluated.
-Once it was clear filtering was taking place, which major dataset redesign was needed with
 
-* Reduction in filter categories to 5.
-* Many 1 MB rowgroups in a file.
-* Data generation to ensure only 1-2 categories per rowgroup.
-
-It's a very unnatural dataset -but it does at least show filtering at work, and that the benchmark PR is ready to be reviewed, as is the filtering.
+Note: I'm now reviewing on the category count again; I was seeking a design where each rowgroup only had a single value of the `varcat` column, but multiple rowgroups
+matched equality and set membership probes.
+Increasing the category count back to 20 with still only 1 category per rowgroup should reduce the number of rows which need materialization for the final comparison.
+Assuming the "it's due to the materialization of the entire record" hypothesis is correct,
+reducing the number of records to be materialization is key.
 
 
-# Parquet Benchmark Results
+# Parquet Benchmark Results, April 2026
 
 
 | Benchmark                                                   | Results                    | Source                                                                                                                                      |
@@ -530,6 +563,16 @@ Given how so many variant types are stored as signed and unsigned int32 and int6
 could act as a reference (though as there is a TODO from at least 2013 about benchmarking there, better benchmarking may be broadly useful.
 Designing integer unmarshalling for modern vectorizable CPUs and with modern Java features would be a broadly useful exercise.
 
+## Status as of May 2026
+
+1. The benchmark is merged into the main branch, commit id `28593d5e4`.
+2. The production code improvements has been merged into the main branch [Optimizing Variant read path with lazy caching
+#3481](https://github.com/apache/parquet-java/pull/3481), commit `7be05b470`.
+3. Ongoing work is hardening the read process. [GH-3561 Harden variant decoding](https://github.com/apache/parquet-java/issues/3561).
+4. Correctness issue identified [Variant getFieldByKey() on large objects silently fails if variant metadata is unsorted #3529]https://github.com/apache/parquet-java/issues/3529.
+
+All the implementations need to pick up the best robustness and performance of the other implementations.
+
 # Criticisms
 
 Before reaching conclusions about the performance of the libraries, it is worthwhile considering whether the
@@ -595,7 +638,7 @@ and without code modifications: run them on an `r5a.large` instance with Ubuntu 
 
 This is likely true.
 
-Given that the metadata of a variant is parsed on every signle row, the more complex a variant is, the longer the parse
+Given that the metadata of a variant is parsed on every single row, the more complex a variant is, the longer the parse
 time is likely to be, with consequential impact on query performance.
 If row filtering on shredded columns was performant, at least this parsing would only be needed on filtered columns.
 Meanwhile, it's something else to benchmark and tune in future work.
