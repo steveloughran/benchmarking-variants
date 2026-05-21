@@ -40,12 +40,14 @@ This should not be the case.
 
 ## Results
 
-| Benchmark                                                   | Results                             |
-|-------------------------------------------------------------|-------------------------------------|
-| [Iceberg Variant Benchmarks](./results/iceberg/index.html)  | Spark SQL Queries on Iceberg tables |
-| [Parquet](./results/parquet)                                | Parquet Variant Benchmarks          | 
-| [Parquet Performance Graphs](./results/parquet-performance) | Parquet Performance Graphs          | 
-| [Experiments](./experiments)                                | Before/after comparison of changes  | 
+| Benchmark Set                                                        | Results                                   | Date       |
+|----------------------------------------------------------------------|-------------------------------------------|------------|
+| [Iceberg Variant Benchmarks](./results/iceberg/index.html)           | Spark SQL Queries on Iceberg tables       | 2026-04-09 |
+| [Iceberg + Predicate Pushdown](./results/iceberg-predicate-pushdown) | Iceberg benchmark with predicate pushdown | 2026-05-21 |
+| [Parquet](./results/parquet)                                         | Parquet Variant Benchmarks                | 2026-04-10 |
+| [Parquet Performance Graphs](./results/parquet-performance)          | Parquet Performance Graphs                | 2026-04-23 |
+| [Experiments](./experiments)                                         | Before/after comparison of changes        | 
+
 
 ## Site Repository
 

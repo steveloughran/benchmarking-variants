@@ -21,28 +21,34 @@
    * The Parquet-java variant support to borrow more from Iceberg.
    * An Iceberg benchmark run with all the pending PRs merged to see what difference that makes. 
 
-At the time of the writing of the initial document (10-04-2026) the benchmark results imply that it is faster to perform filtering on variant data stored in Avro in Iceberg + Spark queries than it is on data stored in Parquet -and that shredded variants are the worst.
-This should not be the case.
+At the time of the writing of the initial document (10-04-2026) the benchmark results impled that it was faster to perform filtering on variant data stored in Avro in Iceberg + Spark queries than it is on data stored in Parquet -and that shredded variants were the worst.
+
+By the end of may, we had enough rowgroup filtering to show that
+* Queries which generated no results were fast
+* Queries which filtered on shredded fields were close to the speed of unshredded, though this required a careful
+  design of the data and the queries to ensure many rowgroups were skipped.
 
 ## Relevant Issues and Pull Requests
 
 This is a list of PRs by myself, Qiegang Long and others which should improve query/read time.
 Sorted numerically by project.
 
-| Project | Issue/PR                                                 | Title                                                                                  | Author         |
-|---------|----------------------------------------------------------|----------------------------------------------------------------------------------------|----------------|
-| Iceberg | [14707](https://github.com/apache/iceberg/issues/14707)  | Vectorized read for variant                                                            | enriquh        |
-| Iceberg | [15510](https://github.com/apache/iceberg/issues/15510)  | Parquet Rowgroup skipping for variant predicate                                        | Qiegang Long   |
-| Iceberg | [15629](https://github.com/apache/iceberg/pull/15629)    | *Core, Spark: Add JMH benchmarks for Variants*                                         | Steve Loughran |
-| Spark   | [54598](https://github.com/apache/spark/pull/54598)      | Enable Parquet rowgroup skipping for variant filters to improve query-time performance | Qiegang Long   |
-| Spark   | [54394](https://github.com/apache/spark/pull/54394)      | Support variant_get predicate for DSv2 filter pushdown                                 | Qiegang Long   |
-| Parquet | [3452](https://github.com/apache/parquet-java/pull/3452) | *GH-3451. Add a JMH benchmark for variants*                                            | Steve Loughran |
-| Parquet | [3481](https://github.com/apache/parquet-java/pull/3481) | *Optimizing Variant read path with lazy caching*                                       | Neelesh Salian |
+| Project | Issue/PR                                                 | Title                                                                                   | Author         |
+|---------|----------------------------------------------------------|-----------------------------------------------------------------------------------------|----------------|
+| Iceberg | [14707](https://github.com/apache/iceberg/issues/14707)  | Vectorized read for variant                                                             | enriquh        |
+| Iceberg | [15510](https://github.com/apache/iceberg/issues/15510)  | Parquet Rowgroup skipping for variant predicate                                         | Steve Loughran |
+| Iceberg | [16448](https://github.com/apache/iceberg/issues/16448)  | Spark: implement SupportsPushDownVariantExtractions for shredded variant column pruning | Qiegang Long   |
+| Iceberg | [15629](https://github.com/apache/iceberg/pull/15629)    | Core, Spark: Add JMH benchmarks for Variants                                            | Steve Loughran |
+| Spark   | [54598](https://github.com/apache/spark/pull/54598)      | Enable Parquet rowgroup skipping for variant filters to improve query-time performance  | Qiegang Long   |
+| Spark   | [54394](https://github.com/apache/spark/pull/54394)      | Support variant_get predicate for DSv2 filter pushdown                                  | Qiegang Long   |
+| Parquet | [3452](https://github.com/apache/parquet-java/pull/3452) | GH-3451. Add a JMH benchmark for variants                                               | Steve Loughran |
+| Parquet | [3481](https://github.com/apache/parquet-java/pull/3481) | Optimizing Variant read path with lazy caching                                          | Neelesh Salian |
+
 
 This document only covers benchmarks from the two issues marked in italics: one in Iceberg and one in Parquet-java. 
 A full stack built with all PRs is expected to be faster, especially through file pushdown and use of the vectorized reader.
 
-For ongoing results there, see [experiments](./experiments). As of May 7 2026, there's no tangible benefit of a stack of spark and iceberg changes, which is still being debugged. 
+For ongoing results there, see [experiments](./experiments). As of May 21 2026, we can show that rowgroup skipping shows some speedup on shredded variants, but there is much work remaining.32
 
 ## Related Work
 
@@ -274,16 +280,15 @@ the code during optimisation.
 
 ## Iceberg Benchmark Results
 
-| Benchmark                                                       | Results                             | Source                                                                                                                                                                                  |
-|-----------------------------------------------------------------|-------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [IcebergSourceVariantIOBenchmark](./results/iceberg/index.html) | Spark SQL Queries on Iceberg tables | [source](https://github.com/steveloughran/iceberg/blob/pr/benchmark-variant/spark/v4.1/spark/src/jmh/java/org/apache/iceberg/spark/source/parquet/IcebergSourceVariantIOBenchmark.java) |
-
+| Benchmark                                                            | Results                                   | Source                                                                                                                                                                                              | Date       |
+|----------------------------------------------------------------------|-------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------|
+| [IcebergSourceVariantIOBenchmark](./results/iceberg/index.html)      | Spark SQL Queries on Iceberg tables       | [source](https://github.com/steveloughran/iceberg/blob/pr/benchmark-variant/spark/v4.1/spark/src/jmh/java/org/apache/iceberg/spark/source/parquet/IcebergSourceVariantIOBenchmark.java)             | 2026-04-09 |
+| [Iceberg + Predicate Pushdown](./results/iceberg-predicate-pushdown) | Iceberg benchmark with predicate pushdown | <br/>[source](https://github.com/steveloughran/iceberg/blob/variant-rowgroups-benchmark/spark/v4.1/spark/src/jmh/java/org/apache/iceberg/spark/source/parquet/IcebergSourceVariantIOBenchmark.java) | 2026-05-21 |
 
 In the [benchmark results](./results/iceberg/index.html), Avro is the topmost file type of every benchmark,
 followed by unshredded Parquet, and finally shredded Parquet.
 
-![file types](./images/iceberg-benchmark-file-types-wide.png)
-
+## 2026-04-09 Results
 All simple projection operations take a similar amount of time when executed through the Spark SQL API.
 
 ```sql
@@ -310,6 +315,55 @@ SELECT id FROM variant_table WHERE category = 5
 The filtering was *worse* with shredded variants.
 This implies that whatever predicate-pushdown based filtering on variant fields there is, it isn't
 looking at shredded field statistics.
+
+## 2026-05-21 Results
+
+These results are from a more complex codebase
+
+1. Spark 4.2-SNAPSHOT with Qiegang Long's patches for spark to push down `variant_get()` to iceberg
+2. The iceberg-side of that code
+3. [#16133](https://github.com/apache/iceberg/pull/16133) ParquetMetricsRowGroupFilter to filter variants
+
+The benchmark suite has been expanded to include many more cases, in particular set membership/non membership and SELECT calls where files are out of range. The size and layout of the test data has changed too, to force multiple rowgroups in a single file.
+Looking at timing differences between the two benchmarks is worthless.
+More significant is the avro/unshredded/shredded numbers on each test run.
+
+
+### Variance is high
+
+These results are from an overnight test run with 20 warm iterations and 20 execution iterations. That'll just have to be accepted and not blamed on user activities such as zoom calls at the same time. Assume garbage collection, spark scheduling or other possible causes.
+
+### Filtering to total exclusion is fast
+
+There are two queries which now show very significant speedup, to the extent that they are much faster than Avro queries.
+
+
+![not-in-range](./images/2026-05-21-not-in-range.png)
+
+1. A set not-in-membership probe (`select id from table where variant_get(nested, '$.varcategory', 'int') IN (100, 400)` .
+1. Here there is no output, and only a single scan of the metrics.
+A range scan with no results: `select id from table where variant_get(nested, '$.varcategory', 'int') < 0`
+
+### Variant filtering can be slightly faster on shredded data against a tuned dataset
+
+SELECT calls which filter on a variant then project either a variant value or a normal column are still really slow. They're faster than unshredded, but still slower than the same query against avro data, even though with rowgroups being skipped, less data should be being read.
+
+![marginal speedup](./images/2026-05-21-filtering-marginal-speedup.png)
+
+
+Qiegang Long says it is due to the entire variant being reconstructed, even only a single shredded variant field needs to be examined, and has created [Spark: implement SupportsPushDownVariantExtractions for shredded variant column pruning  #16448](https://github.com/apache/iceberg/issues/16448) to address this.
+This behaviour means that when filtering on the shredded variant category field, once the metrics say a rowgroup must be scanned, every record is reconstructed before the single field is compared.
+For rowgroup skipping to show _any_ benefits, enough rowgroups need to be skipped that there is a measurable reduction in the number of records to be rebuilt.
+
+This explains why gettign results from benchmark was so frustrating; ultimately `ParquetMetricsRowGroupFilter` had to be extended to add package-private counters of scans and skipping to provide any evidence that filters were being evaluated.
+Once it was clear filtering was taking place, which major dataset redesign was needed with
+
+* Reduction in filter categories to 5.
+* Many 1 MB rowgroups in a file.
+* Data generation to ensure only 1-2 categories per rowgroup.
+
+It's a very unnatural dataset -but it does at least show filtering at work, and that the benchmark PR is ready to be reviewed, as is the filtering.
+
 
 # Parquet Benchmark Results
 
